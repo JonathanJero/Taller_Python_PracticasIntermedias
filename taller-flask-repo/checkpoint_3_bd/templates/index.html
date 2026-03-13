@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block contenido %}
+
+<h1>📋 Mis Tareas</h1>
+
+{% if tareas %}
+    <ul>
+        {% for tarea in tareas %}
+            <li>{{ tarea.titulo }}</li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p style="color: #888;">No hay tareas todavía. ¡En el Bloque 4 vamos a agregar el formulario para crear tareas!</p>
+{% endif %}
+
+{% endblock %}

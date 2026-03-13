@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block contenido %}
+
+<h1>🐍 Taller de Flask</h1>
+<p>¡Bienvenido! Este es tu primer template con Jinja2.</p>
+
+<h2>Lista de tareas de ejemplo:</h2>
+<ul>
+    {% for tarea in tareas %}
+        <li>{{ tarea }}</li>
+    {% endfor %}
+</ul>
+
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block contenido %}
+
+<h1>👋 Formulario de Saludo</h1>
+
+<!-- Formulario POST -->
+<form method="POST" action="/saludo" style="margin-bottom: 24px;">
+    <label for="nombre" style="display:block; margin-bottom:6px; font-weight:bold;">Tu nombre:</label>
+    <input
+        type="text"
+        id="nombre"
+        name="nombre"
+        placeholder="Ingresá tu nombre..."
+        required
+        style="padding: 10px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; margin-right: 8px;"
+    >
+    <button
+        type="submit"
+        style="padding: 10px 20px; background: #333; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer;"
+    >
+        Saludar →
+    </button>
+</form>
+
+<!-- Mostrar resultado solo si se envió el formulario -->
+{% if nombre %}
+    <div style="background: #d4edda; border: 1px solid #28a745; border-radius: 8px; padding: 16px;">
+        <h2 style="color: #155724; margin: 0;">¡Hola, {{ nombre }}! 🎉</h2>
+    </div>
+{% endif %}
+
+{% endblock %}

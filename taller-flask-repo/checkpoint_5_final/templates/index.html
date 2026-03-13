@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+
+{% block contenido %}
+
+<h1 style="font-size: 26px; font-weight: 800; color: #2d3748; margin-bottom: 20px;">📋 Mis Tareas</h1>
+
+<!-- ─── ESTADÍSTICAS ─── -->
+<div class="stats">
+    <div class="stat-card total">
+        <div class="stat-number" style="color: #4a5568;">{{ total }}</div>
+        <div class="stat-label">Total</div>
+    </div>
+    <div class="stat-card pending">
+        <div class="stat-number" style="color: #e53e3e;">{{ pendientes }}</div>
+        <div class="stat-label">Pendientes</div>
+    </div>
+    <div class="stat-card done">
+        <div class="stat-number" style="color: #38a169;">{{ completadas }}</div>
+        <div class="stat-label">Completadas</div>
+    </div>
+</div>
+
+<!-- ─── FORMULARIO NUEVA TAREA ─── -->
+<div class="form-nueva">
+    <h3>➕ Nueva tarea</h3>
+    <form method="POST" action="/agregar">
+        <div class="form-row">
+            <input class="input-text" type="text" name="titulo"
+                   placeholder="¿Qué tenés que hacer?" required>
+            <input class="input-text" type="text" name="descripcion"
+                   placeholder="Descripción (opcional)">
+            <button type="submit" class="btn btn-green">+ Agregar</button>
+        </div>
+    </form>
+</div>
+
+<!-- ─── FILTROS ─── -->
+<div class="filtros">
+    <a href="/"              class="filtro-btn {{ 'activo' if filtro == 'todas'      else '' }}">Todas ({{ total }})</a>
+    <a href="/?filtro=pendientes"  class="filtro-btn {{ 'activo' if filtro == 'pendientes' else '' }}">Pendientes ({{ pendientes }})</a>
+    <a href="/?filtro=completadas" class="filtro-btn {{ 'activo' if filtro == 'completadas' else '' }}">Completadas ({{ completadas }})</a>
+</div>
+
+<!-- ─── LISTA ─── -->
+<div class="tareas-lista">
+    {% if tareas %}
+        {% for tarea in tareas %}
+        <div class="tarea-card {{ 'completada' if tarea.completada else '' }}">
+
+            <div class="tarea-info">
+                <div class="tarea-titulo {{ 'tachado' if tarea.completada else '' }}">
+                    {{ tarea.titulo }}
+                </div>
+                {% if tarea.descripcion %}
+                    <div class="tarea-desc">{{ tarea.descripcion }}</div>
+                {% endif %}
+                <div class="tarea-fecha">
+                    Creada: {{ tarea.creada_en.strftime('%d/%m/%Y %H:%M') }}
+                </div>
+            </div>
+
+            <div class="tarea-acciones">
+                <a href="/completar/{{ tarea.id }}"
+                   class="btn btn-sm {{ 'btn-yellow' if tarea.completada else 'btn-green' }}">
+                    {{ '↩ Deshacer' if tarea.completada else '✓ Completar' }}
+                </a>
+                <a href="/editar/{{ tarea.id }}" class="btn btn-sm btn-blue">✏️ Editar</a>
+                <a href="/eliminar/{{ tarea.id }}"
+                   onclick="return confirm('¿Eliminar esta tarea?')"
+                   class="btn btn-sm btn-red">🗑️ Borrar</a>
+            </div>
+
+        </div>
+        {% endfor %}
+    {% else %}
+        <div class="vacio">
+            <div class="vacio-icon">📭</div>
+            <div class="vacio-texto">No hay tareas aquí</div>
+            <div class="vacio-sub">
+                {% if filtro == 'pendientes' %}¡Completaste todo! 🎉
+                {% elif filtro == 'completadas' %}Aún no completaste ninguna.
+                {% else %}Usá el formulario de arriba para agregar la primera.{% endif %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+{% endblock %}

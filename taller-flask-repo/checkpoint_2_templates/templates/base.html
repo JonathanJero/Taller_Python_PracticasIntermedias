@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ titulo }} — Taller Flask</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        nav { background: #333; padding: 12px 20px; border-radius: 8px; margin-bottom: 24px; }
+        nav a { color: white; text-decoration: none; margin-right: 16px; font-weight: bold; }
+        nav a:hover { text-decoration: underline; }
+        main { background: white; padding: 24px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { color: #333; margin-top: 0; }
+        footer { text-align: center; color: #888; margin-top: 24px; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <a href="/">🏠 Inicio</a>
+        <a href="/saludo">👋 Saludo</a>
+        <a href="/acerca">ℹ️ Acerca</a>
+    </nav>
+
+    <main>
+        {% block contenido %}
+        <!-- El contenido de cada página va aquí -->
+        {% endblock %}
+    </main>
+
+    <footer>
+        Taller Flask + SQLite — Ingeniería
+    </footer>
+
+</body>
+</html>

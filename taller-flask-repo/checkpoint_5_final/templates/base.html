@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ titulo }} — Taller Flask</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+
+    <nav class="navbar">
+        <a href="/" class="navbar-brand">🐍 Taller Flask</a>
+        <div class="navbar-links">
+            <a href="/">Tareas</a>
+            <a href="/acerca">Acerca</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% block contenido %}{% endblock %}
+    </div>
+
+</body>
+</html>
