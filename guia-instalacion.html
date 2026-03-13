@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guía de Instalación — Python + VS Code</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+  --bg:       #F8FAFC;
+  --surface:  #FFFFFF;
+  --border:   #E2E8F0;
+  --border2:  #CBD5E1;
+  --text:     #1E293B;
+  --muted:    #64748B;
+  --green:    #059669;
+  --green-bg: #ECFDF5;
+  --blue:     #2563EB;
+  --blue-bg:  #EFF6FF;
+  --orange:   #D97706;
+  --orange-bg:#FFFBEB;
+  --red:      #DC2626;
+  --red-bg:   #FEF2F2;
+  --purple:   #7C3AED;
+  --purple-bg:#F5F3FF;
+  --mono:     'JetBrains Mono', monospace;
+  --sans:     'Inter', sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 40px 24px 60px;
+}
+
+/* ── HEADER ── */
+.page-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+.page-header .badge {
+  display: inline-block;
+  background: var(--blue-bg);
+  color: var(--blue);
+  border: 1px solid #BFDBFE;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 14px;
+  border-radius: 20px;
+  margin-bottom: 14px;
+  font-family: var(--mono);
+}
+.page-header h1 {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 10px;
+  line-height: 1.2;
+}
+.page-header p {
+  font-size: 16px;
+  color: var(--muted);
+  max-width: 520px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ── PROGRESS BAR ── */
+.progress-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 40px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 50px;
+  padding: 6px;
+  overflow: hidden;
+}
+.pb-step {
+  flex: 1;
+  text-align: center;
+  padding: 8px 4px;
+  border-radius: 40px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: default;
+  transition: all .2s;
+}
+.pb-step.done {
+  background: var(--green);
+  color: white;
+}
+.pb-step.active {
+  background: var(--blue);
+  color: white;
+}
+
+/* ── SECTION ── */
+.section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+}
+.step-num {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.step-num.blue   { background: var(--blue-bg);   color: var(--blue); }
+.step-num.green  { background: var(--green-bg);  color: var(--green); }
+.step-num.purple { background: var(--purple-bg); color: var(--purple); }
+.step-num.orange { background: var(--orange-bg); color: var(--orange); }
+
+.section-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+.section-sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.section-body {
+  padding: 24px;
+}
+
+/* ── STEP LIST ── */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.step {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+.step-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 2px solid var(--border2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+.step-content h4 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.step-content p {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* ── CODE BLOCK ── */
+.code-block {
+  background: #0F172A;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 14px 0;
+}
+.code-bar {
+  background: #1E293B;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-bottom: 1px solid #334155;
+}
+.dot { width:10px; height:10px; border-radius:50%; }
+.dr { background:#FF5F57; } .dy { background:#FFBD2E; } .dg { background:#28C840; }
+.code-label { font-family:var(--mono); font-size:11px; color:#64748B; margin-left:6px; }
+.code-body {
+  padding: 14px 18px;
+  font-family: var(--mono);
+  font-size: 13px;
+  color: #E2E8F0;
+  line-height: 1.8;
+}
+.code-body .cmd  { color: #4ADE80; }
+.code-body .out  { color: #94A3B8; }
+.code-body .note { color: #64748B; font-style: italic; }
+.code-body .warn { color: #FCD34D; }
+
+/* ── CALLOUT ── */
+.callout {
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin: 14px 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+.callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+.callout.tip    { background: var(--green-bg);  border: 1px solid #A7F3D0; color: #065F46; }
+.callout.warn   { background: var(--orange-bg); border: 1px solid #FDE68A; color: #92400E; }
+.callout.info   { background: var(--blue-bg);   border: 1px solid #BFDBFE; color: #1E40AF; }
+.callout.danger { background: var(--red-bg);    border: 1px solid #FECACA; color: #991B1B; }
+
+/* ── INLINE CODE ── */
+code {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: #F1F5F9;
+  border: 1px solid var(--border);
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: #0F172A;
+}
+
+/* ── CHECK LIST ── */
+.checklist {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 14px 0;
+}
+.checklist li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.checklist li::before {
+  content: '☐';
+  font-size: 18px;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+/* ── DIVIDER ── */
+.div { height:1px; background:var(--border); margin:18px 0; }
+
+/* ── OS TOGGLE ── */
+.os-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+.os-btn {
+  padding: 7px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--border2);
+  background: white;
+  color: var(--muted);
+  font-family: var(--sans);
+  transition: all .2s;
+}
+.os-btn.active {
+  background: var(--blue);
+  color: white;
+  border-color: var(--blue);
+}
+
+/* ── TWO-COL ── */
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin: 14px 0;
+}
+
+/* ── RESULT BOX ── */
+.result-box {
+  background: var(--green-bg);
+  border: 1px solid #A7F3D0;
+  border-radius: 10px;
+  padding: 16px 20px;
+  text-align: center;
+  margin-top: 16px;
+}
+.result-box .emoji { font-size: 32px; display:block; margin-bottom:8px; }
+.result-box h3 { color: var(--green); font-size: 16px; margin-bottom: 4px; }
+.result-box p  { color: #065F46; font-size: 13px; }
+
+/* ── FOOTER ── */
+.page-footer {
+  text-align: center;
+  margin-top: 48px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+@media print {
+  @page { margin: 15mm; }
+  .page-header .badge, .os-toggle { display: none; }
+  .section { break-inside: avoid; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="badge">🐍 Taller Flask · Guía de Instalación</div>
+  <h1>Configurá tu entorno<br>de desarrollo</h1>
+  <p>Instalación paso a paso de Python y VS Code para Windows. Seguí los pasos en orden — si algo falla, avisá a los tutores.</p>
+</div>
+
+<!-- ── PROGRESS ── -->
+<div class="progress-bar">
+  <div class="pb-step active">1 · Python</div>
+  <div class="pb-step">2 · VS Code</div>
+  <div class="pb-step">3 · Extensión</div>
+  <div class="pb-step">4 · Terminal</div>
+  <div class="pb-step">5 · Flask</div>
+  <div class="pb-step">6 · Verificar</div>
+</div>
+
+<!-- ═══════════════════════════════ -->
+<!-- PASO 1 — PYTHON                -->
+<!-- ═══════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="step-num blue">1</div>
+    <div>
+      <div class="section-title">Instalar Python</div>
+      <div class="section-sub">Versión 3.11 o superior · Tiempo estimado: 5 minutos</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <span>Antes de instalar, verificá si ya tenés Python. Abrí el buscador de Windows, escribí <strong>cmd</strong>, y en la ventana negra que abre escribí <code>python --version</code>. Si aparece un número como <code>Python 3.11.x</code>, ya tenés Python y podés saltar al Paso 2.</span>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-icon">1</div>
+        <div class="step-content">
+          <h4>Ir a python.org</h4>
+          <p>Abrí tu navegador y entrá a <strong>python.org/downloads</strong>. Vas a ver un botón amarillo grande que dice <strong>"Download Python 3.x.x"</strong>. Hacé clic ahí.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-icon">2</div>
+        <div class="step-content">
+          <h4>Ejecutar el instalador</h4>
+          <p>Abrí el archivo descargado (<code>python-3.x.x-amd64.exe</code>). Antes de hacer clic en "Install Now", revisá que las dos opciones de abajo estén marcadas.</p>
+          <div class="callout danger">
+            <span class="callout-icon">🚨</span>
+            <span><strong>MUY IMPORTANTE:</strong> Marcá la casilla <strong>"Add python.exe to PATH"</strong> antes de instalar. Sin eso, Python no va a funcionar desde el terminal. Es la casilla que está abajo de todo en el instalador.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-icon">3</div>
+        <div class="step-content">
+          <h4>Completar la instalación</h4>
+          <p>Hacé clic en <strong>"Install Now"</strong> y esperá que termine. Cuando aparezca el mensaje "Setup was successful", la instalación terminó.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-icon">4</div>
+        <div class="step-content">
+          <h4>Verificar en el terminal</h4>
+          <p>Cerrá cualquier ventana de cmd que tengas abierta, abrí una nueva (buscá "cmd" en Windows) y escribí:</p>
+          <div class="code-block">
+            <div class="code-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div><span class="code-label">Command Prompt</span></div>
+            <div class="code-body">
+              <span class="cmd">python --version</span><br>
+              <span class="out">Python 3.11.x  ← tiene que aparecer algo así</span><br>
+              <br>
+              <span class="cmd">pip --version</span><br>
+              <span class="out">pip 23.x.x from ...  ← y esto también</span>
+            </div>
+          </div>
+          <div class="callout warn">
+            <span class="callout-icon">⚠️</span>
+            <span>Si dice <code>'python' no se reconoce</code>, probá con <code>py --version</code>. Si tampoco funciona, avisá a los tutores — puede que el PATH no se configuró bien.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ -->
+<!-- PASO 2 — VS CODE               -->
+<!-- ═══════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="step-num green">2</div>
+    <div>
+      <div class="section-title">Instalar VS Code</div>
+      <div class="section-sub">Visual Studio Code — editor de código gratuito · Tiempo estimado: 3 minutos</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <span>VS Code es el editor que vamos a usar para escribir código. Es gratuito, muy popular y tiene autocompletado inteligente. Si ya tenés instalado VS Code, pasá directo al Paso 3.</span>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-icon">1</div>
+        <div class="step-content">
+          <h4>Descargar VS Code</h4>
+          <p>Entrá a <strong>code.visualstudio.com</strong>. Hacé clic en el botón azul de descarga — automáticamente detecta tu sistema operativo.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-icon">2</div>
+        <div class="step-content">
+          <h4>Instalar</h4>
+          <p>Ejecutá el archivo descargado (<code>VSCodeUserSetup-x64-x.x.x.exe</code>). En las opciones, marcá:</p>
+          <ul class="checklist">
+            <li>Agregar "Abrir con Code" al menú contextual de archivos</li>
+            <li>Agregar "Abrir con Code" al menú contextual de carpetas</li>
+            <li>Agregar al PATH (recomendado)</li>
+          </ul>
+          <p>Después hacé clic en "Instalar" y esperá que termine.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-icon">3</div>
+        <div class="step-content">
+          <h4>Abrir VS Code</h4>
+          <p>Abrí VS Code desde el acceso directo en el escritorio o buscándolo en el menú de Windows. Vas a ver una pantalla de bienvenida azul/oscura.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ -->
+<!-- PASO 3 — EXTENSIÓN PYTHON      -->
+<!-- ═══════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="step-num purple">3</div>
+    <div>
+      <div class="section-title">Instalar la extensión de Python</div>
+      <div class="section-sub">Agrega autocompletado, resaltado de sintaxis y herramientas para Python · 2 minutos</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-icon">1</div>
+        <div class="step-content">
+          <h4>Abrir el panel de extensiones</h4>
+          <p>En VS Code, hacé clic en el ícono de cuadraditos del menú lateral izquierdo (parece cuatro cuadrados), o usá el atajo <code>Ctrl + Shift + X</code>.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-icon">2</div>
+        <div class="step-content">
+          <h4>Buscar "Python"</h4>
+          <p>En el buscador de extensiones escribí <strong>Python</strong>. El primer resultado debería ser <strong>"Python"</strong> publicado por <strong>Microsoft</strong> con millones de instalaciones.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-icon">3</div>
+        <div class="step-content">
+          <h4>Instalar</h4>
+          <p>Hacé clic en el botón azul <strong>"Install"</strong> de esa extensión. Se instala en segundos.</p>
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <span>También instalá <strong>"Jinja"</strong> (buscala igual) — agrega resaltado de colores para las plantillas HTML que vamos a usar en el taller.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ -->
+<!-- PASO 4 — CREAR PROYECTO        -->
+<!-- ═══════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="step-num orange">4</div>
+    <div>
+      <div class="section-title">Crear la carpeta del proyecto y el entorno virtual</div>
+      <div class="section-sub">Hacemos esto en el terminal integrado de VS Code · 5 minutos</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <div class="callout info">
+      <span class="callout-icon">📁</span>
+      <span>El <strong>entorno virtual</strong> (<code>venv</code>) es una "caja" separada para tu proyecto. Las librerías que instalés acá no afectan al resto de tu computadora. Siempre hay que activarlo antes de trabajar.</span>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-icon">1</div>
+        <div class="step-content">
+          <h4>Crear la carpeta del proyecto</h4>
+          <p>En VS Code, andá a <strong>Archivo → Abrir carpeta</strong>. Navegá a donde querés guardar el proyecto (por ejemplo en tu Escritorio o en Documentos) y creá una carpeta nueva llamada <strong>taller-flask</strong>. Después seleccionala.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-icon">2</div>
+        <div class="step-content">
+          <h4>Abrir el terminal de VS Code</h4>
+          <p>Usá el atajo <code>Ctrl + `</code> (la tecla con la tilde que está antes del 1) o andá a <strong>Terminal → Nuevo Terminal</strong>. Se abre un panel abajo del editor — ya está apuntando a tu carpeta del proyecto.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-icon">3</div>
+        <div class="step-content">
+          <h4>Crear y activar el entorno virtual</h4>
+          <p>Copiá y pegá estos comandos <strong>uno por uno</strong> en el terminal. Esperá que cada uno termine antes de pegar el siguiente:</p>
+          <div class="code-block">
+            <div class="code-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div><span class="code-label">Terminal en VS Code</span></div>
+            <div class="code-body">
+              <span class="note"># 1. Crear el entorno virtual</span><br>
+              <span class="cmd">python -m venv venv</span><br>
+              <br>
+              <span class="note"># 2. Activarlo (Windows CMD/PowerShell)</span><br>
+              <span class="cmd">venv\Scripts\activate</span><br>
+              <br>
+              <span class="out">(venv) C:\Users\...\taller-flask>  ← así se ve cuando está activo</span>
+            </div>
+          </div>
+          <div class="callout danger">
+            <span class="callout-icon">🚨</span>
+            <span>Si el terminal dice <em>"la ejecución de scripts está deshabilitada"</em>, ejecutá este comando primero y después volvé a activar el venv:<br><code>Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</code></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ -->
+<!-- PASO 5 — INSTALAR FLASK        -->
+<!-- ═══════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="step-num blue">5</div>
+    <div>
+      <div class="section-title">Instalar Flask y SQLAlchemy</div>
+      <div class="section-sub">Con el entorno virtual activo · 1 minuto</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <span>Verificá que el terminal muestra <strong>(venv)</strong> al inicio de la línea antes de instalar. Si no lo ves, el entorno virtual no está activo — volvé al Paso 4.</span>
+    </div>
+
+    <div class="code-block">
+      <div class="code-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div><span class="code-label">Terminal — con (venv) activo</span></div>
+      <div class="code-body">
+        <span class="note"># Instalar Flask y Flask-SQLAlchemy</span><br>
+        <span class="cmd">pip install flask flask-sqlalchemy</span><br>
+        <br>
+        <span class="out">Collecting flask...</span><br>
+        <span class="out">Collecting flask-sqlalchemy...</span><br>
+        <span class="out">...</span><br>
+        <span class="out">Successfully installed Flask-3.x.x Jinja2-3.x ... ← tiene que aparecer esto</span>
+      </div>
+    </div>
+
+    <div class="callout tip">
+      <span class="callout-icon">💡</span>
+      <span>Si la instalación tarda más de 2 minutos, verificá tu conexión a internet. Si da algún error, avisá a los tutores — no intentes resolver errores de pip solo.</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ -->
+<!-- PASO 6 — VERIFICACIÓN FINAL    -->
+<!-- ═══════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="step-num green">6</div>
+    <div>
+      <div class="section-title">Verificación final — ¡Todo listo!</div>
+      <div class="section-sub">Probamos que Flask funciona de principio a fin · 3 minutos</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-icon">1</div>
+        <div class="step-content">
+          <h4>Crear el archivo de prueba</h4>
+          <p>En VS Code, creá un archivo nuevo (Archivo → Nuevo archivo) y guardalo como <code>test.py</code> en la carpeta <code>taller-flask</code>. Copiá este código:</p>
+          <div class="code-block">
+            <div class="code-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div><span class="code-label">test.py</span></div>
+            <div class="code-body">
+              <span class="cmd">from flask import Flask</span><br>
+              <span class="cmd">app = Flask(__name__)</span><br>
+              <br>
+              <span class="cmd">@app.route('/')</span><br>
+              <span class="cmd">def hola():</span><br>
+              <span class="cmd">    return '&lt;h1&gt;¡Flask está funcionando! 🎉&lt;/h1&gt;'</span><br>
+              <br>
+              <span class="cmd">if __name__ == '__main__':</span><br>
+              <span class="cmd">    app.run(debug=True)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-icon">2</div>
+        <div class="step-content">
+          <h4>Correrlo</h4>
+          <p>En el terminal (con el venv activo), escribí:</p>
+          <div class="code-block">
+            <div class="code-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div><span class="code-label">Terminal</span></div>
+            <div class="code-body">
+              <span class="cmd">python test.py</span><br>
+              <br>
+              <span class="out"> * Running on http://127.0.0.1:5000</span><br>
+              <span class="out"> * Debug mode: on</span><br>
+              <span class="warn"> * Restarting with stat</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-icon">3</div>
+        <div class="step-content">
+          <h4>Ver el resultado en el navegador</h4>
+          <p>Abrí tu navegador (Chrome, Edge, Firefox) y entrá a <strong>http://localhost:5000</strong>.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="result-box">
+      <span class="emoji">🎉</span>
+      <h3>Si ves "¡Flask está funcionando!" en el navegador, tu entorno está perfecto.</h3>
+      <p>Podés cerrar el servidor con <code>Ctrl + C</code> en el terminal. Nos vemos en el taller.</p>
+    </div>
+
+    <div class="div"></div>
+
+    <p style="font-size:14px;color:var(--muted);">Si algo no funciona, <strong>no te preocupes</strong> — avisá a los tutores antes del taller o al inicio. Vamos a resolverlo juntos. Lo único que necesitás para el taller es tener Python instalado; el resto lo hacemos en el momento.</p>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════ -->
+<!-- PASO 7 — GIT Y REPO            -->
+<!-- ═══════════════════════════════ -->
+<div class="section">
+  <div class="section-header">
+    <div class="step-num purple">7</div>
+    <div>
+      <div class="section-title">Instalar Git y bajar el repo del taller</div>
+      <div class="section-sub">Solo si no tenes Git · 5 minutos</div>
+    </div>
+  </div>
+  <div class="section-body">
+
+    <div class="callout info">
+      <span class="callout-icon">ℹ️</span>
+      <span>Git sirve para descargar el codigo del taller y luego actualizarlo. Si ya tenes Git instalado, salta al paso de clonar.</span>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-icon">1</div>
+        <div class="step-content">
+          <h4>Instalar Git (Windows)</h4>
+          <p>Entrá a <strong>git-scm.com/downloads</strong> y descargá Git. Ejecutá el instalador con las opciones por defecto.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-icon">2</div>
+        <div class="step-content">
+          <h4>Verificar Git</h4>
+          <p>Abrí una terminal nueva y escribí:</p>
+          <div class="code-block">
+            <div class="code-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div><span class="code-label">Terminal</span></div>
+            <div class="code-body">
+              <span class="cmd">git --version</span><br>
+              <span class="out">git version 2.x.x</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-icon">3</div>
+        <div class="step-content">
+          <h4>Clonar el repo del taller</h4>
+          <p>En la carpeta donde queres guardar el proyecto, ejecuta:</p>
+          <div class="code-block">
+            <div class="code-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div><span class="code-label">Terminal</span></div>
+            <div class="code-body">
+              <span class="cmd">git clone URL_DEL_REPO</span><br>
+              <span class="cmd">cd taller-flask-repo</span>
+            </div>
+          </div>
+          <div class="callout tip">
+            <span class="callout-icon">💡</span>
+            <span>Reemplaza <code>URL_DEL_REPO</code> por el link que compartan los tutores.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-icon">4</div>
+        <div class="step-content">
+          <h4>Actualizar el repo (pull)</h4>
+          <p>Si el repo ya esta clonado y queres traer cambios nuevos:</p>
+          <div class="code-block">
+            <div class="code-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div><span class="code-label">Terminal</span></div>
+            <div class="code-body">
+              <span class="cmd">cd taller-flask-repo</span><br>
+              <span class="cmd">git pull</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <span class="callout-icon">⚠️</span>
+      <span>Si <code>git pull</code> muestra errores, no borres nada. Avisá a los tutores.</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- ── RESUMEN RÁPIDO ── -->
+<div class="section">
+  <div class="section-header">
+    <div class="step-num orange">📋</div>
+    <div>
+      <div class="section-title">Resumen — Comandos que vas a usar todos los días</div>
+      <div class="section-sub">Guardá esto para referencia rápida</div>
+    </div>
+  </div>
+  <div class="section-body">
+    <div class="two-col">
+      <div>
+        <p style="font-weight:600;margin-bottom:10px;font-size:14px;">Al empezar a trabajar:</p>
+        <div class="code-block">
+          <div class="code-body" style="font-size:12px;">
+            <span class="note"># 1. Entrar a la carpeta</span><br>
+            <span class="cmd">cd taller-flask</span><br>
+            <span class="note"># 2. Activar el entorno</span><br>
+            <span class="cmd">venv\Scripts\activate</span><br>
+            <span class="note"># 3. Correr la app</span><br>
+            <span class="cmd">python app.py</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p style="font-weight:600;margin-bottom:10px;font-size:14px;">Señales de que todo está bien:</p>
+        <ul class="checklist">
+          <li>Terminal muestra <code>(venv)</code></li>
+          <li>Terminal muestra <code>Running on http://...</code></li>
+          <li>El navegador muestra tu app</li>
+          <li>Al cambiar código y guardar, el servidor se recarga solo</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-footer">
+  Taller Desarrollo Web con Python · Flask + SQLite · Ingeniería<br>
+  Cualquier duda antes del taller, escribile a los tutores.
+</div>
+
+</body>
+</html>

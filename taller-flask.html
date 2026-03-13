@@ -1,0 +1,1852 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taller: Desarrollo Web con Python — Flask + SQLite</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:ital,wght@0,400;0,500;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #080C14;
+  --surface:  #0E1521;
+  --card:     #141E2E;
+  --card2:    #1A2640;
+  --border:   #243048;
+  --border2:  #2E3F5C;
+  --green:    #00E87A;
+  --green2:   #00C466;
+  --blue:     #38BDF8;
+  --purple:   #A78BFA;
+  --orange:   #FB923C;
+  --red:      #F87171;
+  --yellow:   #FCD34D;
+  --text:     #E8F0FE;
+  --muted:    #7A90AD;
+  --dim:      #3D5068;
+  --font:     'Outfit', sans-serif;
+  --mono:     'JetBrains Mono', monospace;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html, body {
+  width:100%; height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font);
+  overflow:hidden;
+}
+
+/* ═══ PROGRESS ═══ */
+#progress {
+  position:fixed; top:0; left:0; height:3px; z-index:200;
+  background:linear-gradient(90deg, var(--green), var(--blue), var(--purple));
+  transition: width .5s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 0 12px var(--green);
+}
+
+/* ═══ SLIDES ═══ */
+#deck { position:relative; width:100vw; height:100vh; }
+
+.slide {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column;
+  opacity:0; pointer-events:none;
+  transition: opacity .45s ease, transform .45s cubic-bezier(.4,0,.2,1);
+  transform: translateX(60px);
+  overflow:hidden;
+}
+.slide.active {
+  opacity:1; pointer-events:all;
+  transform:translateX(0);
+}
+.slide.exit {
+  opacity:0;
+  transform:translateX(-60px);
+}
+
+/* ═══ BOTTOM NAV ═══ */
+#nav {
+  position:fixed; bottom:0; left:0; right:0; height:50px;
+  background:rgba(8,12,20,0.96);
+  border-top:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+  padding:0 28px; z-index:200;
+  backdrop-filter:blur(12px);
+}
+#nav .n-left  { display:flex; align-items:center; gap:16px; }
+#nav .n-right { display:flex; align-items:center; gap:8px; }
+#nav .counter {
+  font-family:var(--mono); font-size:12px; color:var(--muted);
+}
+#nav .title-text {
+  font-size:12px; color:var(--muted);
+  max-width:400px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+#nav button {
+  background:var(--card); border:1px solid var(--border2);
+  color:var(--text); padding:5px 16px; border-radius:6px;
+  font-family:var(--font); font-size:13px; cursor:pointer;
+  transition:all .2s;
+}
+#nav button:hover {
+  background:var(--card2); border-color:var(--green); color:var(--green);
+}
+#nav .btn-notes {
+  border-color:var(--dim); color:var(--muted); font-size:11px;
+}
+#nav .btn-notes:hover { border-color:var(--blue); color:var(--blue); }
+
+/* ═══ SPEAKER NOTES ═══ */
+#notes-panel {
+  position:fixed; bottom:50px; left:0; right:0;
+  background:rgba(8,12,20,0.98); border-top:1px solid var(--border);
+  padding:0 28px 16px; max-height:220px; overflow-y:auto;
+  transform:translateY(100%); transition:transform .3s ease;
+  z-index:199; backdrop-filter:blur(12px);
+}
+#notes-panel.open { transform:translateY(0); }
+#notes-panel h4 {
+  font-family:var(--mono); font-size:10px; color:var(--green);
+  text-transform:uppercase; letter-spacing:2px;
+  padding:12px 0 8px; margin-bottom:6px;
+  border-bottom:1px solid var(--border); position:sticky; top:0;
+  background:rgba(8,12,20,0.98);
+}
+#notes-panel p, #notes-panel li {
+  font-size:13px; color:var(--muted); line-height:1.7; margin-bottom:6px;
+}
+#notes-panel .tag-t1 {
+  display:inline-block; background:rgba(167,139,250,.15);
+  border:1px solid var(--purple); color:var(--purple);
+  font-size:10px; font-family:var(--mono); padding:1px 8px;
+  border-radius:10px; margin-right:6px; vertical-align:middle;
+}
+#notes-panel .tag-t2 {
+  display:inline-block; background:rgba(251,146,60,.15);
+  border:1px solid var(--orange); color:var(--orange);
+  font-size:10px; font-family:var(--mono); padding:1px 8px;
+  border-radius:10px; margin-right:6px; vertical-align:middle;
+}
+#notes-panel .tag-ambos {
+  display:inline-block; background:rgba(0,232,122,.1);
+  border:1px solid var(--green); color:var(--green);
+  font-size:10px; font-family:var(--mono); padding:1px 8px;
+  border-radius:10px; margin-right:6px; vertical-align:middle;
+}
+
+/* ═══ REUSABLE COMPONENTS ═══ */
+.tag {
+  display:inline-flex; align-items:center; gap:6px;
+  font-family:var(--mono); font-size:11px; font-weight:600;
+  text-transform:uppercase; letter-spacing:1.2px;
+  padding:4px 12px; border-radius:20px;
+}
+.tag-green { background:rgba(0,232,122,.1); border:1px solid var(--green); color:var(--green); }
+.tag-blue  { background:rgba(56,189,248,.1); border:1px solid var(--blue); color:var(--blue); }
+.tag-purple{ background:rgba(167,139,250,.1); border:1px solid var(--purple); color:var(--purple); }
+.tag-orange{ background:rgba(251,146,60,.1); border:1px solid var(--orange); color:var(--orange); }
+.tag-red   { background:rgba(248,113,113,.1); border:1px solid var(--red); color:var(--red); }
+
+.card {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:12px; padding:20px 24px;
+}
+.card-g { background:rgba(0,232,122,.04); border-color:rgba(0,232,122,.2); }
+.card-b { background:rgba(56,189,248,.04); border-color:rgba(56,189,248,.2); }
+.card-p { background:rgba(167,139,250,.04); border-color:rgba(167,139,250,.2); }
+
+.h1 { font-size:46px; font-weight:900; line-height:1.05; }
+.h2 { font-size:36px; font-weight:800; line-height:1.1; }
+.h3 { font-size:24px; font-weight:700; }
+.h4 { font-size:18px; font-weight:600; }
+.body { font-size:16px; line-height:1.6; }
+.small { font-size:14px; color:var(--muted); line-height:1.5; }
+.mono  { font-family:var(--mono); }
+
+.g { color:var(--green); }
+.b { color:var(--blue); }
+.p { color:var(--purple); }
+.o { color:var(--orange); }
+.m { color:var(--muted); }
+
+/* ═══ CODE WINDOW ═══ */
+.cw {
+  background:#080D15; border:1px solid var(--border);
+  border-radius:10px; overflow:hidden;
+  font-family:var(--mono); font-size:13px;
+}
+.cw-bar {
+  background:#0D1520; padding:10px 14px;
+  display:flex; align-items:center; gap:7px;
+  border-bottom:1px solid var(--border);
+}
+.dot { width:12px; height:12px; border-radius:50%; }
+.dr { background:#FF5F57; } .dy { background:#FFBD2E; } .dg { background:#28C840; }
+.cw-file { font-size:11px; color:var(--muted); margin-left:8px; }
+.cw-body { padding:16px 20px; line-height:1.75; overflow-x:auto; }
+.ln { color:var(--dim); display:inline-block; width:20px; text-align:right; margin-right:16px; user-select:none; font-size:11px; }
+
+/* Dracula-inspired syntax */
+.kw { color:#FF79C6; }
+.fn { color:#50FA7B; }
+.st { color:#F1FA8C; }
+.cm { color:#6272A4; font-style:italic; }
+.de { color:#BD93F9; }
+.nu { color:#BD93F9; }
+.cl { color:#8BE9FD; }
+.va { color:#F8F8F2; }
+.im { color:#FF79C6; }
+
+/* ═══ TERMINAL ═══ */
+.term {
+  background:#050A10; border:1px solid var(--border);
+  border-radius:10px; overflow:hidden;
+  font-family:var(--mono); font-size:13px;
+}
+.term-bar {
+  background:#0A1018; padding:10px 14px;
+  display:flex; align-items:center; gap:7px;
+  border-bottom:1px solid var(--border);
+}
+.term-body { padding:14px 18px; line-height:1.85; }
+.pr { color:var(--green); }
+.tc { color:var(--text); }
+.to { color:var(--muted); }
+.ts { color:var(--green); }
+.te { color:var(--red); }
+
+/* ═══ GRIDS ═══ */
+.col2 { display:grid; grid-template-columns:1fr 1fr; gap:28px; }
+.col2l { display:grid; grid-template-columns:1fr 1.5fr; gap:28px; }
+.col2r { display:grid; grid-template-columns:1.5fr 1fr; gap:28px; }
+.col3 { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+.col4 { display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
+
+/* ═══ SLIDE WRAPPER TYPES ═══ */
+.sw { padding:44px 72px 70px; flex:1; display:flex; flex-direction:column; }
+.sw-center { padding:44px 72px 70px; flex:1; display:flex; flex-direction:column; justify-content:center; }
+.sw,
+.sw-center {
+  overflow-y:auto;
+  max-height:100%;
+  scrollbar-gutter: stable;
+}
+
+/* ═══ MISC ═══ */
+.sl { font-size:11px; font-family:var(--mono); color:var(--green); text-transform:uppercase; letter-spacing:2px; margin-bottom:10px; }
+.divider { height:1px; background:var(--border); margin:20px 0; }
+.pill {
+  display:inline-flex; align-items:center;
+  font-family:var(--mono); font-size:12px;
+  background:var(--card2); border:1px solid var(--border2);
+  color:var(--muted); padding:3px 10px; border-radius:4px;
+}
+ul.blist { list-style:none; display:flex; flex-direction:column; gap:10px; }
+ul.blist li { display:flex; align-items:flex-start; gap:10px; font-size:15px; line-height:1.5; }
+ul.blist li::before { content:'▹'; color:var(--green); flex-shrink:0; margin-top:1px; }
+ul.blist.blue li::before { color:var(--blue); }
+ul.blist.muted li::before { color:var(--muted); }
+
+/* Grid BG for title */
+.grid-bg {
+  position:absolute; inset:0; pointer-events:none;
+  background-image:linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size:56px 56px; opacity:.25;
+}
+.glow-tr {
+  position:absolute; top:-150px; right:-150px;
+  width:500px; height:500px; border-radius:50%;
+  background:radial-gradient(circle, rgba(0,232,122,.1) 0%, transparent 65%);
+  pointer-events:none;
+}
+.glow-bl {
+  position:absolute; bottom:-150px; left:-150px;
+  width:400px; height:400px; border-radius:50%;
+  background:radial-gradient(circle, rgba(56,189,248,.07) 0%, transparent 65%);
+  pointer-events:none;
+}
+
+/* Bloque tiempo agenda */
+.bloque {
+  display:flex; align-items:stretch; gap:0;
+  border-radius:10px; overflow:hidden;
+  border:1px solid var(--border);
+}
+.bloque-time {
+  background:var(--card); padding:10px 14px;
+  font-family:var(--mono); font-size:11px; color:var(--muted);
+  display:flex; align-items:center; min-width:100px; border-right:1px solid var(--border);
+}
+.bloque-bar { width:4px; }
+.bloque-content { flex:1; padding:10px 16px; background:var(--surface); }
+.bloque-title { font-size:14px; font-weight:700; margin-bottom:2px; }
+.bloque-desc { font-size:12px; color:var(--muted); }
+
+/* Arrow connector */
+.arrow-flow {
+  display:flex; align-items:center; justify-content:center; gap:0;
+  margin:20px 0;
+}
+.af-box {
+  background:var(--card); border:1px solid var(--border);
+  border-radius:10px; padding:14px 20px; text-align:center;
+}
+.af-arrow {
+  font-size:20px; color:var(--muted); padding:0 12px; flex-shrink:0;
+}
+
+/* CRUD cards */
+.crud-card {
+  border-radius:10px; padding:16px 18px;
+  display:flex; flex-direction:column; gap:6px;
+}
+
+/* Keyboard hint */
+.kbd {
+  display:inline-flex; align-items:center; justify-content:center;
+  background:var(--card); border:1px solid var(--border2);
+  border-radius:5px; padding:2px 8px; font-family:var(--mono);
+  font-size:11px; color:var(--muted);
+}
+
+/* confetti dots for last slide */
+@keyframes fall {
+  0% { transform:translateY(-20px) rotate(0deg); opacity:1; }
+  100% { transform:translateY(120vh) rotate(720deg); opacity:0; }
+}
+.confetti-dot {
+  position:absolute; width:8px; height:8px; border-radius:2px;
+  animation: fall linear infinite;
+}
+
+/* animate on slide entry */
+.slide.active .fade-in {
+  animation: fadeUp .5s ease both;
+}
+.slide.active .fade-in:nth-child(1) { animation-delay:.05s; }
+.slide.active .fade-in:nth-child(2) { animation-delay:.12s; }
+.slide.active .fade-in:nth-child(3) { animation-delay:.19s; }
+.slide.active .fade-in:nth-child(4) { animation-delay:.26s; }
+.slide.active .fade-in:nth-child(5) { animation-delay:.33s; }
+.slide.active .fade-in:nth-child(6) { animation-delay:.40s; }
+
+@keyframes fadeUp {
+  from { opacity:0; transform:translateY(14px); }
+  to   { opacity:1; transform:translateY(0); }
+}
+
+@keyframes blink {
+  0%,100% { opacity:1; } 50% { opacity:0; }
+}
+.cursor { animation:blink 1s step-end infinite; }
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<div id="deck">
+
+<!-- ══════════════════════════════════════════════════
+     SLIDE 01 — BIENVENIDA
+═══════════════════════════════════════════════════ -->
+<section class="slide active" id="s1" data-title="Bienvenida y presentaciones">
+  <div class="sw-center" style="position:relative;overflow:hidden;">
+    <div class="grid-bg"></div>
+    <div class="glow-tr"></div>
+    <div class="glow-bl"></div>
+
+    <div style="position:relative;z-index:1;">
+      <div class="fade-in" style="margin-bottom:20px;">
+        <span class="tag tag-green">🐍 Python · Flask · SQLite</span>
+        &nbsp;
+        <span class="tag tag-blue">⏱ 3h 20min</span>
+      </div>
+
+      <div class="fade-in" style="margin-bottom:8px;">
+        <span class="mono" style="color:var(--green);font-size:18px;">
+          $ python app.py<span class="cursor">_</span>
+        </span>
+      </div>
+
+      <h1 class="fade-in h1" style="margin-bottom:8px;">
+        Desarrollo Web<br><span class="g">con Python</span>
+      </h1>
+      <p class="fade-in" style="font-size:20px;color:var(--muted);margin-bottom:40px;max-width:540px;">
+        De cero a una app funcional con base de datos — en una tarde.
+      </p>
+
+      <!-- Tutor cards -->
+      <div class="fade-in col2" style="max-width:640px;margin-bottom:36px;">
+        <div class="card card-p" style="display:flex;align-items:center;gap:14px;">
+          <div style="width:44px;height:44px;border-radius:50%;background:rgba(167,139,250,.2);border:2px solid var(--purple);display:flex;align-items:center;justify-content:center;font-size:20px;">👤</div>
+          <div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--purple);text-transform:uppercase;letter-spacing:1px;">Tutor 1</div>
+            <div style="font-weight:700;">Jonathan Jerónimo</div>
+          </div>
+        </div>
+        <div class="card card-p" style="border-color:rgba(251,146,60,.3);background:rgba(251,146,60,.04);display:flex;align-items:center;gap:14px;">
+          <div style="width:44px;height:44px;border-radius:50%;background:rgba(251,146,60,.2);border:2px solid var(--orange);display:flex;align-items:center;justify-content:center;font-size:20px;">👤</div>
+          <div>
+            <div style="font-size:11px;font-family:var(--mono);color:var(--orange);text-transform:uppercase;letter-spacing:1px;">Tutor 2</div>
+            <div style="font-weight:700;">Álvaro Ceballos</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ice breaker -->
+      <div class="fade-in card card-b" style="max-width:640px;">
+        <div style="font-size:13px;font-family:var(--mono);color:var(--blue);margin-bottom:8px;">// ROMPEHIELOS</div>
+        <ul class="blist blue">
+          <li>¿Cuál es tu nombre y carrera?</li>
+          <li>¿Qué es lo más difícil de programar que has hecho?</li>
+          <li>¿Qué esperás llevarte del taller hoy?</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     SLIDE 02 — QUÉ VAMOS A CONSTRUIR
+═══════════════════════════════════════════════════ -->
+<section class="slide" id="s2" data-title="¿Qué vamos a construir hoy?">
+  <div class="sw col2l" style="align-items:stretch;gap:36px;">
+    <div style="display:flex;flex-direction:column;justify-content:center;">
+      <p class="fade-in sl">resultado final</p>
+      <h2 class="fade-in h2" style="margin-bottom:16px;">Una app web <span class="g">funcional</span></h2>
+      <p class="fade-in body" style="color:var(--muted);margin-bottom:24px;">
+        Al terminar el taller van a tener corriendo en su computadora una aplicación real conectada a una base de datos.
+      </p>
+      <div class="fade-in" style="display:flex;flex-direction:column;gap:10px;margin-bottom:28px;">
+        <div class="card card-g" style="padding:12px 16px;display:flex;gap:12px;align-items:center;">
+          <span style="font-size:20px;">🌐</span>
+          <span style="font-size:15px;">Servidor web corriendo en su máquina</span>
+        </div>
+        <div class="card card-b" style="padding:12px 16px;display:flex;gap:12px;align-items:center;">
+          <span style="font-size:20px;">📄</span>
+          <span style="font-size:15px;">Páginas HTML dinámicas</span>
+        </div>
+        <div class="card" style="padding:12px 16px;display:flex;gap:12px;align-items:center;border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.04);">
+          <span style="font-size:20px;">🗄️</span>
+          <span style="font-size:15px;">Base de datos SQLite guardando info real</span>
+        </div>
+        <div class="card" style="padding:12px 16px;display:flex;gap:12px;align-items:center;border-color:rgba(251,146,60,.3);background:rgba(251,146,60,.04);">
+          <span style="font-size:20px;">✅</span>
+          <span style="font-size:15px;">CRUD completo: crear, ver, editar, borrar</span>
+        </div>
+      </div>
+      <div class="fade-in" style="display:flex;gap:10px;flex-wrap:wrap;">
+        <span class="tag tag-green">Flask</span>
+        <span class="tag tag-blue">SQLite</span>
+        <span class="tag tag-purple">Jinja2</span>
+        <span class="tag tag-orange">SQLAlchemy</span>
+      </div>
+    </div>
+
+    <!-- App mockup -->
+    <div class="fade-in" style="display:flex;flex-direction:column;justify-content:center;gap:12px;">
+      <div class="cw" style="flex:1;">
+        <div class="cw-bar">
+          <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+          <span class="cw-file">localhost:5000/tareas</span>
+          <div style="flex:1;background:var(--card);border-radius:4px;height:22px;margin-left:12px;display:flex;align-items:center;padding:0 10px;">
+            <span style="font-size:10px;color:var(--muted);">🔒 localhost:5000</span>
+          </div>
+        </div>
+        <div class="cw-body" style="padding:20px;font-family:var(--font);">
+          <div style="font-size:20px;font-weight:800;margin-bottom:16px;">📋 Mis Tareas</div>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:10px;background:var(--surface);padding:10px 12px;border-radius:8px;border:1px solid var(--border);">
+              <span style="color:var(--green);">✓</span>
+              <span style="text-decoration:line-through;color:var(--muted);font-size:13px;">Aprender qué es Flask</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;background:var(--surface);padding:10px 12px;border-radius:8px;border:1px solid var(--border);">
+              <span style="color:var(--yellow);">○</span>
+              <span style="font-size:13px;">Conectar la base de datos</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;background:var(--surface);padding:10px 12px;border-radius:8px;border:1px solid var(--border);">
+              <span style="color:var(--yellow);">○</span>
+              <span style="font-size:13px;">Implementar CRUD completo</span>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <input style="flex:1;background:var(--card);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--muted);font-size:12px;font-family:var(--font);" placeholder="Nueva tarea..." readonly>
+            <button style="background:var(--green);color:#080C14;border:none;padding:7px 14px;border-radius:6px;font-weight:700;font-size:12px;cursor:default;">+ Agregar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     SLIDE 03 — AGENDA
+═══════════════════════════════════════════════════ -->
+<section class="slide" id="s3" data-title="Agenda del taller">
+  <div class="sw col2l" style="gap:32px;align-items:start;">
+    <div>
+      <p class="fade-in sl">hoja de ruta</p>
+      <h2 class="fade-in h2" style="margin-bottom:24px;">Agenda — <span class="g">3h 20min</span></h2>
+      <div style="display:flex;flex-direction:column;gap:10px;flex:1;">
+        <div class="fade-in bloque">
+          <div class="bloque-time">0:00 – 0:25</div>
+          <div class="bloque-bar" style="background:var(--blue);"></div>
+          <div class="bloque-content">
+            <div class="bloque-title b">Bienvenida + Setup del entorno</div>
+            <div class="bloque-desc">Presentaciones, instalar Python, VS Code y Flask · Verificar que todo corra</div>
+          </div>
+          <div style="padding:10px 14px;display:flex;align-items:center;"><span class="tag tag-blue" style="font-size:10px;">Setup</span></div>
+        </div>
+        <div class="fade-in bloque">
+          <div class="bloque-time">0:25 – 0:50</div>
+          <div class="bloque-bar" style="background:var(--green);"></div>
+          <div class="bloque-content">
+            <div class="bloque-title g">Bloque 1 — Primer servidor</div>
+            <div class="bloque-desc">Cómo funciona la web · Qué es Flask · Primera ruta · Ver respuesta en el navegador</div>
+          </div>
+          <div style="padding:10px 14px;display:flex;align-items:center;"><span class="tag tag-green" style="font-size:10px;">Práctica</span></div>
+        </div>
+        <div class="fade-in bloque">
+          <div class="bloque-time">0:50 – 1:25</div>
+          <div class="bloque-bar" style="background:var(--purple);"></div>
+          <div class="bloque-content">
+            <div class="bloque-title p">Bloque 2 — Rutas, vistas y formularios</div>
+            <div class="bloque-desc">Múltiples rutas · Templates Jinja2 · Plantilla base · Formularios GET/POST</div>
+          </div>
+          <div style="padding:10px 14px;display:flex;align-items:center;"><span class="tag tag-purple" style="font-size:10px;">Práctica</span></div>
+        </div>
+        <div class="fade-in bloque">
+          <div class="bloque-time">1:25 – 2:15</div>
+          <div class="bloque-bar" style="background:var(--orange);"></div>
+          <div class="bloque-content">
+            <div class="bloque-title o">Bloque 3 — Base de datos</div>
+            <div class="bloque-desc">Qué es SQLite · ORM con SQLAlchemy · Definir modelo · Crear tabla</div>
+          </div>
+          <div style="padding:10px 14px;display:flex;align-items:center;"><span class="tag tag-orange" style="font-size:10px;">Práctica</span></div>
+        </div>
+        <div class="fade-in bloque">
+          <div class="bloque-time">2:15 – 3:00</div>
+          <div class="bloque-bar" style="background:var(--red);"></div>
+          <div class="bloque-content">
+            <div class="bloque-title" style="color:var(--red);">Bloque 4 — CRUD completo</div>
+            <div class="bloque-desc">Crear · Leer · Actualizar · Eliminar datos desde la interfaz web</div>
+          </div>
+          <div style="padding:10px 14px;display:flex;align-items:center;"><span class="tag tag-red" style="font-size:10px;">Práctica</span></div>
+        </div>
+        <div class="fade-in bloque">
+          <div class="bloque-time">3:00 – 3:20</div>
+          <div class="bloque-bar" style="background:var(--yellow);"></div>
+          <div class="bloque-content">
+            <div class="bloque-title" style="color:var(--yellow);">Bloque 5 + Cierre — Mini-proyecto</div>
+            <div class="bloque-desc">Integrar todo · Tu app corriendo · ¿Qué sigue? · Preguntas</div>
+          </div>
+          <div style="padding:10px 14px;display:flex;align-items:center;"><span class="tag" style="background:rgba(252,211,77,.1);border:1px solid var(--yellow);color:var(--yellow);font-size:10px;">Final</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fade-in" style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card card-b" style="padding:16px 18px;">
+        <div style="font-size:12px;color:var(--blue);font-family:var(--mono);margin-bottom:8px;">OBJETIVOS DEL TALLER</div>
+        <ul class="blist blue" style="gap:6px;">
+          <li style="font-size:13px;">Entender el flujo request → respuesta</li>
+          <li style="font-size:13px;">Separar HTML y Python con templates</li>
+          <li style="font-size:13px;">Persistir datos con SQLite</li>
+          <li style="font-size:13px;">Completar un CRUD funcional</li>
+        </ul>
+      </div>
+      <div class="card" style="padding:16px 18px;">
+        <div style="font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:8px;">REGLAS DE JUEGO</div>
+        <ul class="blist muted" style="gap:6px;">
+          <li style="font-size:13px;">Si te perdés, levanta la mano</li>
+          <li style="font-size:13px;">Cada bloque termina con un control</li>
+          <li style="font-size:13px;">No avanzamos si alguien está atras</li>
+        </ul>
+      </div>
+      <div class="card card-g" style="padding:16px 18px;">
+        <div style="font-size:12px;color:var(--green);font-family:var(--mono);margin-bottom:8px;">CHECKPOINTS</div>
+        <p class="small" style="margin-bottom:8px;">Cada bloque tiene una carpeta con el codigo completo para recuperar el ritmo.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <span class="pill">checkpoint_1_servidor</span>
+          <span class="pill">checkpoint_2_templates</span>
+          <span class="pill">checkpoint_3_bd</span>
+          <span class="pill">checkpoint_4_crud</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     SLIDE 04 — SETUP
+═══════════════════════════════════════════════════ -->
+<section class="slide" id="s4" data-title="Setup del entorno (todos juntos)">
+  <div class="sw col2l" style="gap:32px;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:16px;">
+      <div>
+        <p class="fade-in sl">antes de arrancar</p>
+        <h2 class="fade-in h2" style="margin-bottom:6px;">Setup del <span class="g">entorno</span></h2>
+        <p class="fade-in small">Hacemos esto juntos — no se mueve nadie hasta que todos tienen todo funcionando.</p>
+      </div>
+      <div class="fade-in" style="display:flex;flex-direction:column;gap:8px;">
+        <div class="card" style="padding:12px 16px;display:flex;gap:12px;align-items:center;">
+          <span style="font-size:18px;flex-shrink:0;">1️⃣</span>
+          <div>
+            <div style="font-weight:600;font-size:14px;">Descargar Python 3.11+</div>
+            <div class="pill" style="margin-top:4px;font-size:11px;">python.org/downloads</div>
+          </div>
+        </div>
+        <div class="card" style="padding:12px 16px;display:flex;gap:12px;align-items:center;">
+          <span style="font-size:18px;flex-shrink:0;">2️⃣</span>
+          <div>
+            <div style="font-weight:600;font-size:14px;">Instalar VS Code</div>
+            <div class="pill" style="margin-top:4px;font-size:11px;">code.visualstudio.com + extensión Python</div>
+          </div>
+        </div>
+        <div class="card" style="padding:12px 16px;display:flex;gap:12px;align-items:center;">
+          <span style="font-size:18px;flex-shrink:0;">3️⃣</span>
+          <div>
+            <div style="font-weight:600;font-size:14px;">Clonar / crear carpeta del proyecto</div>
+          </div>
+        </div>
+        <div class="card card-g" style="padding:12px 16px;display:flex;gap:12px;align-items:center;">
+          <span style="font-size:18px;flex-shrink:0;">4️⃣</span>
+          <div>
+            <div style="font-weight:600;font-size:14px;color:var(--green);">Correr los comandos del terminal →</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fade-in" style="display:flex;flex-direction:column;gap:12px;">
+      <div class="term">
+        <div class="term-bar">
+          <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+          <span class="term-title">Terminal — Windows CMD / PowerShell</span>
+        </div>
+        <div class="term-body">
+          <div><span class="pr">$</span> <span class="tc">python --version</span></div>
+          <div><span class="to">Python 3.11.x</span></div>
+          <div style="margin-top:8px;"><span class="pr">$</span> <span class="tc">pip --version</span></div>
+          <div><span class="to">pip 23.x.x from ...</span></div>
+          <div style="margin-top:8px;"><span class="pr">$</span> <span class="tc">mkdir taller-flask &amp;&amp; cd taller-flask</span></div>
+          <div style="margin-top:8px;"><span class="pr">$</span> <span class="tc">python -m venv venv</span></div>
+          <div><span class="to"># Crear entorno virtual</span></div>
+          <div style="margin-top:8px;"><span class="pr">$</span> <span class="tc">venv\Scripts\activate</span></div>
+          <div><span class="ts">(venv) ✓ entorno activado</span></div>
+          <div style="margin-top:8px;"><span class="pr">$</span> <span class="tc">pip install flask flask-sqlalchemy</span></div>
+          <div><span class="ts">Successfully installed Flask-3.x ...</span></div>
+        </div>
+      </div>
+      <div class="card card-b" style="padding:12px 16px;">
+        <div style="font-size:12px;color:var(--blue);font-family:var(--mono);margin-bottom:6px;">💡 SI ALGO FALLA</div>
+        <p class="small">Levantá la mano inmediatamente. Los tutores van a ayudarte. No hay preguntas tontas.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     SLIDE 05 — CÓMO FUNCIONA LA WEB
+═══════════════════════════════════════════════════ -->
+<section class="slide" id="s5" data-title="¿Cómo funciona la web?">
+  <div class="sw col2l" style="gap:32px;align-items:start;">
+    <div>
+      <p class="fade-in sl">conceptos base</p>
+      <h2 class="fade-in h2" style="margin-bottom:8px;">¿Qué pasa cuando escribís <span class="g">una URL</span>?</h2>
+      <p class="fade-in small" style="margin-bottom:28px;">Igual que Arduino: hay una entrada, algo la procesa, y sale una respuesta.</p>
+
+      <div class="fade-in arrow-flow" style="margin-bottom:28px;">
+        <div class="af-box" style="min-width:140px;background:rgba(56,189,248,.06);border-color:rgba(56,189,248,.3);">
+          <div style="font-size:28px;margin-bottom:6px;">💻</div>
+          <div style="font-weight:700;color:var(--blue);">Navegador</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">Cliente</div>
+          <div class="pill" style="margin-top:8px;font-size:11px;">GET /tareas</div>
+        </div>
+        <div class="af-arrow">──────→</div>
+        <div class="af-box" style="min-width:160px;background:rgba(0,232,122,.06);border-color:rgba(0,232,122,.3);">
+          <div style="font-size:28px;margin-bottom:6px;">🐍</div>
+          <div style="font-weight:700;color:var(--green);">Flask (Python)</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">Servidor · Tu código</div>
+          <div class="pill" style="margin-top:8px;font-size:11px;">app.py corriendo</div>
+        </div>
+        <div class="af-arrow">⇄</div>
+        <div class="af-box" style="min-width:140px;background:rgba(167,139,250,.06);border-color:rgba(167,139,250,.3);">
+          <div style="font-size:28px;margin-bottom:6px;">🗄️</div>
+          <div style="font-weight:700;color:var(--purple);">SQLite</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">Base de datos</div>
+          <div class="pill" style="margin-top:8px;font-size:11px;">tareas.db</div>
+        </div>
+        <div class="af-arrow">←──────</div>
+        <div class="af-box" style="min-width:140px;background:rgba(251,146,60,.06);border-color:rgba(251,146,60,.3);">
+          <div style="font-size:28px;margin-bottom:6px;">📄</div>
+          <div style="font-weight:700;color:var(--orange);">HTML</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">Respuesta</div>
+          <div class="pill" style="margin-top:8px;font-size:11px;">200 OK</div>
+        </div>
+      </div>
+
+      <div class="fade-in col3" style="gap:16px;">
+        <div class="card" style="padding:16px 18px;">
+          <div style="font-family:var(--mono);color:var(--blue);font-size:12px;margin-bottom:8px;">HTTP REQUEST</div>
+          <p class="small">El navegador envía una solicitud al servidor: <span style="color:var(--text);">¿Me das la página /tareas?</span></p>
+        </div>
+        <div class="card card-g" style="padding:16px 18px;">
+          <div style="font-family:var(--mono);color:var(--green);font-size:12px;margin-bottom:8px;">TU CÓDIGO PYTHON</div>
+          <p class="small">Flask recibe la solicitud, ejecuta tu función, puede consultar la BD, y prepara la respuesta.</p>
+        </div>
+        <div class="card" style="padding:16px 18px;border-color:rgba(251,146,60,.3);background:rgba(251,146,60,.04);">
+          <div style="font-family:var(--mono);color:var(--orange);font-size:12px;margin-bottom:8px;">HTTP RESPONSE</div>
+          <p class="small">El servidor devuelve el HTML. El navegador lo muestra. Eso es todo lo que hace la web.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="fade-in" style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card card-b" style="padding:16px 18px;">
+        <div style="font-size:12px;color:var(--blue);font-family:var(--mono);margin-bottom:8px;">ANATOMIA DE UNA REQUEST</div>
+        <ul class="blist blue" style="gap:6px;">
+          <li style="font-size:13px;">Metodo: GET / POST</li>
+          <li style="font-size:13px;">Ruta: /tareas</li>
+          <li style="font-size:13px;">Headers: info del navegador</li>
+          <li style="font-size:13px;">Body: datos del formulario</li>
+        </ul>
+      </div>
+      <div class="card card-g" style="padding:16px 18px;">
+        <div style="font-size:12px;color:var(--green);font-family:var(--mono);margin-bottom:8px;">ANATOMIA DE UNA RESPUESTA</div>
+        <ul class="blist" style="gap:6px;">
+          <li style="font-size:13px;">Status: 200 OK, 404, 500</li>
+          <li style="font-size:13px;">HTML: lo que ve el usuario</li>
+          <li style="font-size:13px;">Tiempo: milisegundos</li>
+        </ul>
+      </div>
+      <div class="card" style="padding:16px 18px;border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.04);">
+        <div style="font-size:12px;color:var(--purple);font-family:var(--mono);margin-bottom:8px;">TRADUCCION RAPIDA</div>
+        <p class="small" style="margin-bottom:8px;">URL = direccion. Ruta = pagina. Funcion = respuesta. Template = HTML.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <span class="pill">/</span>
+          <span class="pill">/saludo</span>
+          <span class="pill">/tareas</span>
+          <span class="pill">/editar/3</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     SLIDE 06 — QUÉ ES FLASK
+═══════════════════════════════════════════════════ -->
+<section class="slide" id="s6" data-title="¿Qué es Flask? (Bloque 1)">
+  <div class="sw col2l" style="gap:32px;align-items:start;">
+    <div>
+      <p class="fade-in sl">bloque 1 · framework</p>
+      <h2 class="fade-in h2" style="margin-bottom:16px;">¿Qué es <span class="g">Flask</span>?</h2>
+      <ul class="fade-in blist" style="margin-bottom:20px;gap:12px;">
+        <li>Un <strong>framework web minimalista</strong> para Python</li>
+        <li>Vos decidís qué poner — no hay magia escondida</li>
+        <li>Perfecto para aprender porque <strong>cada línea se entiende</strong></li>
+        <li>Usado en producción por Pinterest, LinkedIn y más</li>
+        <li>Un solo archivo <span class="mono" style="color:var(--green);">app.py</span> es todo lo que necesitás para arrancar</li>
+      </ul>
+      <div class="fade-in card card-b" style="padding:14px 18px;">
+        <div style="font-size:12px;color:var(--blue);font-family:var(--mono);margin-bottom:6px;">¿POR QUÉ NO DJANGO?</div>
+        <p class="small">Django hace muchas cosas automáticamente. Para aprender, queremos entender <em>qué pasa</em> en cada paso. Flask te lo muestra todo.</p>
+      </div>
+      <div class="fade-in card" style="padding:12px 16px;border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.04);">
+        <div style="font-size:12px;color:var(--purple);font-family:var(--mono);margin-bottom:6px;">ANALOGIA RAPIDA</div>
+        <p class="small">Flask es como una central telefonica: cada ruta es un numero y cada funcion es quien contesta.</p>
+      </div>
+    </div>
+
+    <div class="fade-in">
+      <div class="cw">
+        <div class="cw-bar">
+          <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+          <span class="cw-file">app.py — la app Flask más simple posible</span>
+        </div>
+        <div class="cw-body">
+<span class="ln">1</span><span class="im">from</span> <span class="va"> flask </span><span class="im">import</span> <span class="cl">Flask</span><br>
+<span class="ln">2</span><br>
+<span class="ln">3</span><span class="va">app</span> <span class="kw">=</span> <span class="cl">Flask</span>(<span class="va">__name__</span>)<br>
+<span class="ln">4</span><br>
+<span class="ln">5</span><span class="de">@app.route</span>(<span class="st">'/'</span>)<br>
+<span class="ln">6</span><span class="kw">def</span> <span class="fn">inicio</span>():<br>
+<span class="ln">7</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="st">'¡Hola mundo desde Python!'</span><br>
+<span class="ln">8</span><br>
+<span class="ln">9</span><span class="kw">if</span> <span class="va">__name__</span> <span class="kw">==</span> <span class="st">'__main__'</span>:<br>
+<span class="ln">10</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="va">app</span>.<span class="fn">run</span>(<span class="va">debug</span><span class="kw">=</span><span class="kw">True</span>)<br>
+        </div>
+      </div>
+      <div style="margin-top:12px;" class="term">
+        <div class="term-bar">
+          <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+          <span class="term-title">terminal</span>
+        </div>
+        <div class="term-body">
+          <div><span class="pr">$</span> <span class="tc">python app.py</span></div>
+          <div><span class="ts"> * Running on http://127.0.0.1:5000</span></div>
+          <div><span class="ts"> * Debug mode: on</span></div>
+        </div>
+      </div>
+      <div class="card card-g" style="padding:12px 16px;margin-top:12px;">
+        <div style="font-size:12px;color:var(--green);font-family:var(--mono);margin-bottom:6px;">IDEAS CLAVE</div>
+        <ul class="blist" style="gap:6px;">
+          <li style="font-size:13px;">Ruta define URL, funcion define respuesta</li>
+          <li style="font-size:13px;">Guardar y recargar muestra el cambio</li>
+          <li style="font-size:13px;">Debug reinicia solo el servidor</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     SLIDE 07 — PRIMER SERVIDOR
+═══════════════════════════════════════════════════ -->
+<section class="slide" id="s7" data-title="Tu primer servidor web">
+  <div class="sw col2" style="gap:32px;align-items:start;">
+    <div style="display:flex;flex-direction:column;gap:14px;">
+      <div>
+        <p class="fade-in sl">bloque 1 · práctica</p>
+        <h2 class="fade-in h2" style="margin-bottom:8px;">Tu primer <span class="g">servidor</span></h2>
+        <p class="fade-in small" style="margin-bottom:14px;">El ciclo más importante del desarrollo web:</p>
+        <div class="fade-in" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:20px;">
+          <span class="tag tag-green">✏️ Editar código</span>
+          <span style="color:var(--muted);">→</span>
+          <span class="tag tag-blue">💾 Guardar</span>
+          <span style="color:var(--muted);">→</span>
+          <span class="tag tag-purple">🔄 Recargar navegador</span>
+        </div>
+      </div>
+
+      <div class="fade-in card card-g" style="padding:14px 18px;">
+        <div style="font-size:12px;color:var(--green);font-family:var(--mono);margin-bottom:10px;">⏸ ACTIVIDAD — HACEMOS JUNTOS</div>
+        <ul class="blist" style="gap:8px;">
+          <li style="font-size:14px;">Crear <span class="mono" style="color:var(--green);">app.py</span> con el código del slide anterior</li>
+          <li style="font-size:14px;">Correr <span class="mono" style="color:var(--text);">python app.py</span> en el terminal</li>
+          <li style="font-size:14px;">Abrir <span class="mono" style="color:var(--blue);">http://localhost:5000</span> en el navegador</li>
+          <li style="font-size:14px;">Cambiar el mensaje y recargar</li>
+          <li style="font-size:14px;">Agregar una ruta <span class="mono" style="color:var(--purple)">/hola</span> con tu nombre</li>
+        </ul>
+      </div>
+
+      <div class="fade-in card" style="padding:12px 16px;">
+        <div style="font-size:12px;color:var(--muted);font-family:var(--mono);margin-bottom:6px;">// PUNTO DE CONTROL</div>
+        <p class="small">¿Todos ven una respuesta en el navegador? ✋ Levantá la mano si algo no funciona.</p>
+      </div>
+    </div>
+
+    <div class="fade-in" style="display:flex;flex-direction:column;gap:12px;">
+      <div class="cw">
+        <div class="cw-bar">
+          <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+          <span class="cw-file">app.py — con dos rutas</span>
+        </div>
+        <div class="cw-body">
+<span class="ln">1</span><span class="im">from</span> <span class="va"> flask </span><span class="im">import</span> <span class="cl">Flask</span><br>
+<span class="ln">2</span><br>
+<span class="ln">3</span><span class="va">app</span> <span class="kw">=</span> <span class="cl">Flask</span>(<span class="va">__name__</span>)<br>
+<span class="ln">4</span><br>
+<span class="ln">5</span><span class="cm"># Ruta principal</span><br>
+<span class="ln">6</span><span class="de">@app.route</span>(<span class="st">'/'</span>)<br>
+<span class="ln">7</span><span class="kw">def</span> <span class="fn">inicio</span>():<br>
+<span class="ln">8</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="st">'&lt;h1&gt;¡Hola Taller!&lt;/h1&gt;'</span><br>
+<span class="ln">9</span><br>
+<span class="ln">10</span><span class="cm"># TU RUTA PERSONALIZADA</span><br>
+<span class="ln">11</span><span class="de">@app.route</span>(<span class="st">'/hola'</span>)<br>
+<span class="ln">12</span><span class="kw">def</span> <span class="fn">hola</span>():<br>
+<span class="ln">13</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="st">'&lt;h1&gt;Hola, soy [tu nombre]&lt;/h1&gt;'</span><br>
+        </div>
+      </div>
+      <div class="card card-b" style="padding:12px 16px;">
+        <div style="font-size:12px;color:var(--blue);font-family:var(--mono);margin-bottom:6px;">ERRORES COMUNES</div>
+        <ul class="blist blue" style="gap:6px;">
+          <li style="font-size:13px;">Puerto 5000 ocupado → usar 5001</li>
+          <li style="font-size:13px;">Olvidar guardar antes de recargar</li>
+          <li style="font-size:13px;">Indentacion incorrecta</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     SLIDE 08 — RUTAS Y PARÁMETROS
+═══════════════════════════════════════════════════ -->
+<section class="slide" id="s8" data-title="Rutas y parámetros">
+  <div class="sw col2" style="gap:32px;align-items:start;">
+    <div>
+      <p class="fade-in sl">bloque 1 · rutas</p>
+      <h2 class="fade-in h2" style="margin-bottom:16px;">Rutas y <span class="g">parámetros</span></h2>
+      <p class="fade-in small" style="margin-bottom:16px;">Las rutas son la dirección de cada "página". Podés pasar datos dinámicos en la URL.</p>
+
+      <div class="fade-in" style="display:flex;flex-direction:column;gap:10px;">
+        <div class="card" style="padding:12px 16px;">
+          <div class="pill" style="margin-bottom:8px;font-size:11px;">GET /usuario/Maria</div>
+          <p class="small">Podés capturar partes de la URL como variables en tu función Python.</p>
+        </div>
+        <div class="card card-g" style="padding:12px 16px;">
+          <div class="pill" style="margin-bottom:8px;font-size:11px;background:rgba(0,232,122,.1);">GET /usuario/&lt;nombre&gt;</div>
+          <p class="small">El <span class="mono g">&lt;nombre&gt;</span> en la ruta se convierte en parámetro de la función.</p>
+        </div>
+      </div>
+
+      <div class="fade-in card card-b" style="padding:14px 18px;margin-top:16px;">
+        <div style="font-size:12px;color:var(--blue);font-family:var(--mono);margin-bottom:8px;">⏸ ACTIVIDAD</div>
+        <p class="small">Crear una ruta <span class="mono b">/saludo/&lt;nombre&gt;</span> que devuelva un saludo personalizado.</p>
+      </div>
+    </div>
+
+    <div class="fade-in">
+      <div class="cw">
+        <div class="cw-bar">
+          <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+          <span class="cw-file">app.py — rutas con parámetros</span>
+        </div>
+        <div class="cw-body">
+<span class="ln">1</span><span class="cm"># Ruta fija</span><br>
+<span class="ln">2</span><span class="de">@app.route</span>(<span class="st">'/acerca'</span>)<br>
+<span class="ln">3</span><span class="kw">def</span> <span class="fn">acerca</span>():<br>
+<span class="ln">4</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="st">'Sobre el taller'</span><br>
+<span class="ln">5</span><br>
+<span class="ln">6</span><span class="cm"># Ruta con parámetro dinámico</span><br>
+<span class="ln">7</span><span class="de">@app.route</span>(<span class="st">'/saludo/&lt;nombre&gt;'</span>)<br>
+<span class="ln">8</span><span class="kw">def</span> <span class="fn">saludo</span>(<span class="va">nombre</span>):<br>
+<span class="ln">9</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="st">f'¡Hola, {nombre}!'</span><br>
+<span class="ln">10</span><br>
+<span class="ln">11</span><span class="cm"># Parámetro tipado</span><br>
+<span class="ln">12</span><span class="de">@app.route</span>(<span class="st">'/item/&lt;int:id&gt;'</span>)<br>
+<span class="ln">13</span><span class="kw">def</span> <span class="fn">item</span>(<span class="va">id</span>):<br>
+<span class="ln">14</span>&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="st">f'Item número {id}'</span><br>
+        </div>
+      </div>
+      <div class="term" style="margin-top:10px;">
+        <div class="term-bar">
+          <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+          <span class="term-title">prueba en el navegador</span>
+        </div>
+        <div class="term-body">
+          <div><span class="to">→ </span><span class="b">localhost:5000/saludo/Maria</span></div>
+          <div><span class="ts">   ¡Hola, Maria!</span></div>
+          <div><span class="to">→ </span><span class="b">localhost:5000/item/42</span></div>
+          <div><span class="ts">   Item número 42</span></div>
+        </div>
+      </div>
+      <div class="card" style="padding:12px 16px;margin-top:10px;border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.04);">
+        <div style="font-size:12px;color:var(--purple);font-family:var(--mono);margin-bottom:6px;">PISTA MENTAL</div>
+        <p class="small">Lo que va entre &lt;&gt; es una variable. Si agregas <span class="mono">int:</span>, Flask valida el tipo.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     SLIDE 09 — PLANTILLAS JINJA2
+═══════════════════════════════════════════════════ -->
+<section class="slide" id="s9" data-title="Plantillas HTML con Jinja2 (Bloque 2)">
+  <div class="sw col2" style="gap:28px;align-items:start;">
+    <div>
+      <p class="fade-in sl">bloque 2 · templates</p>
+      <h2 class="fade-in h2" style="margin-bottom:14px;"><span class="p">Jinja2</span> Templates</h2>
+      <p class="fade-in small" style="margin-bottom:16px;">En vez de escribir HTML dentro de Python, separamos el código de la presentación. Mucho más limpio.</p>
+
+      <div class="fade-in" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+        <div class="card card-p" style="padding:12px 16px;">
+          <div style="font-weight:700;color:var(--purple);font-size:14px;">📁 Estructura de carpetas</div>
+          <div class="mono" style="font-size:12px;color:var(--muted);margin-top:8px;line-height:2;">
+            taller-flask/<br>
+            &nbsp;&nbsp;├── app.py<br>
+            &nbsp;&nbsp;└── templates/<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;├── base.html<br>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── index.html
+          </div>
+        </div>
+        <div class="card" style="padding:12px 16px;border-color:rgba(56,189,248,.3);background:rgba(56,189,248,.04);">
+          <div style="font-size:12px;color:var(--blue);font-family:var(--mono);margin-bottom:6px;">ANALOGIA</div>
+          <p class="small">base.html es el molde. Cada pagina hija solo rellena el bloque.</p>
+        </div>
+      </div>
+
+      <div class="fade-in card card-g" style="padding:14px 18px;">
+        <div style="font-size:12px;color:var(--green);font-family:var(--mono);margin-bottom:8px;">⏸ ACTIVIDAD</div>
+        <ul class="blist" style="gap:6px;">
+          <li style="font-size:13px;">Crear carpeta <span class="mono g">templates/</span></li>
+          <li style="font-size:13px;">Crear <span class="mono">base.html</span> con layout</li>
+          <li style="font-size:13px;">Crear <span class="mono">index.html</span> que hereda de base</li>
+          <li style="font-size:13px;">Pasar una variable desde Python al template</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="fade-in" style="display:flex;flex-direction:column;gap:10px;">
+      <div class="cw">
+        <div class="cw-bar">
+          <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+          <span class="cw-file">templates/base.html</span>
+        </div>
+        <div class="cw-body" style="font-size:12px;">
+<span class="st">&lt;!DOCTYPE html&gt;</span><br>
+<span class="st">&lt;html&gt;</span><br>
+<span class="st">&lt;body&gt;</span><br>
+&nbsp;&nbsp;<span class="st">&lt;nav&gt;</span><span class="kw">Mi App Flask</span><span class="st">&lt;/nav&gt;</span><br>
+&nbsp;&nbsp;<span class="de">{% block contenido %}</span><br>
+&nbsp;&nbsp;<span class="de">{% endblock %}</span><br>
+<span class="st">&lt;/body&gt;&lt;/html&gt;</span>
+        </div>
+      </div>
+      <div class="cw">
+        <div class="cw-bar">
+          <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+          <span class="cw-file">templates/index.html</span>
+        </div>
+        <div class="cw-body" style="font-size:12px;">
+<span class="de">{% extends 'base.html' %}</span><br>
+<span class="de">{% block contenido %}</span><br>
+&nbsp;&nbsp;<span class="st">&lt;h1&gt;</span><span class="kw">Hola, {{ nombre }}!</span><span class="st">&lt;/h1&gt;</span><br>
+<span class="de">{% endblock %}</span>
+        </div>
+      </div>
+      <div class="cw">
+        <div class="cw-bar">
+          <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+          <span class="cw-file">app.py</span>
+        </div>
+        <div class="cw-body" style="font-size:12px;">
+<span class="im">from</span> <span class="va"> flask </span><span class="im">import</span> <span class="fn">render_template</span><br>
+<br>
+<span class="de">@app.route</span>(<span class="st">'/'</span>)<br>
+<span class="kw">def</span> <span class="fn">inicio</span>():<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="fn">render_template</span>(<span class="st">'index.html'</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="va">nombre</span><span class="kw">=</span><span class="st">'Taller'</span>)<br>
+        </div>
+      </div>
+      <div class="card card-b" style="padding:12px 16px;">
+        <div style="font-size:12px;color:var(--blue);font-family:var(--mono);margin-bottom:6px;">REGLAS JINJA2</div>
+        <ul class="blist blue" style="gap:6px;">
+          <li style="font-size:13px;">{{ ... }} imprime variables</li>
+          <li style="font-size:13px;">{% ... %} controla logica</li>
+          <li style="font-size:13px;">extends + block = herencia</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     SLIDE 10 — FORMULARIOS
+═══════════════════════════════════════════════════ -->
+<section class="slide" id="s10" data-title="Formularios: GET y POST">
+  <div class="sw col2" style="gap:32px;align-items:start;">
+    <div>
+      <p class="fade-in sl">bloque 2 · formularios</p>
+      <h2 class="fade-in h2" style="margin-bottom:14px;">GET <span class="m">vs</span> <span class="g">POST</span></h2>
+
+      <div class="fade-in col2" style="gap:10px;margin-bottom:16px;">
+        <div class="card card-b" style="padding:14px;">
+          <div style="font-weight:700;color:var(--blue);font-size:14px;margin-bottom:8px;">GET</div>
+          <ul class="blist blue" style="gap:6px;">
+            <li style="font-size:13px;">Lee datos, no los modifica</li>
+            <li style="font-size:13px;">Los datos van en la URL</li>
+            <li style="font-size:13px;"><span class="mono" style="font-size:11px;">/buscar?q=flask</span></li>
+          </ul>
+        </div>
+        <div class="card card-g" style="padding:14px;">
+          <div style="font-weight:700;color:var(--green);font-size:14px;margin-bottom:8px;">POST</div>
+          <ul class="blist" style="gap:6px;">
+            <li style="font-size:13px;">Envía datos al servidor</li>
+            <li style="font-size:13px;">Datos van en el cuerpo</li>
+            <li style="font-size:13px;">Para formularios y crear cosas</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="fade-in card card-g" style="padding:14px 18px;">
+        <div style="font-size:12px;color:var(--green);font-family:var(--mono);margin-bottom:8px;">⏸ ACTIVIDAD</div>
+        <p class="small">Crear un formulario que reciba el nombre del usuario y lo salude con POST.</p>
+      </div>
+    </div>
+
+    <div class="fade-in" style="display:flex;flex-direction:column;gap:10px;">
+      <div class="cw">
+        <div class="cw-bar">
+          <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+          <span class="cw-file">templates/formulario.html</span>
+        </div>
+        <div class="cw-body" style="font-size:12px;">
+<span class="st">&lt;form</span> <span class="va">method</span>=<span class="st">"POST"</span> <span class="va">action</span>=<span class="st">"/saludo"</span><span class="st">&gt;</span><br>
+&nbsp;&nbsp;<span class="st">&lt;input</span> <span class="va">name</span>=<span class="st">"nombre"</span> <span class="va">placeholder</span>=<span class="st">"Tu nombre"</span><span class="st">&gt;</span><br>
+&nbsp;&nbsp;<span class="st">&lt;button</span> <span class="va">type</span>=<span class="st">"submit"</span><span class="st">&gt;</span>Enviar<span class="st">&lt;/button&gt;</span><br>
+<span class="st">&lt;/form&gt;</span>
+        </div>
+      </div>
+      <div class="cw">
+        <div class="cw-bar">
+          <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+          <span class="cw-file">app.py</span>
+        </div>
+        <div class="cw-body" style="font-size:12px;">
+<span class="im">from</span> <span class="va"> flask </span><span class="im">import</span> <span class="fn">request</span>, <span class="fn">render_template</span><br>
+<br>
+<span class="de">@app.route</span>(<span class="st">'/saludo'</span>, <span class="va">methods</span><span class="kw">=</span>[<span class="st">'GET'</span>, <span class="st">'POST'</span>])<br>
+<span class="kw">def</span> <span class="fn">saludo</span>():<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> <span class="va">request</span>.<span class="va">method</span> <span class="kw">==</span> <span class="st">'POST'</span>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="va">nombre</span> <span class="kw">=</span> <span class="va">request</span>.<span class="fn">form</span>[<span class="st">'nombre'</span>]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="fn">render_template</span>(<span class="st">'saludo.html'</span>,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="va">nombre</span><span class="kw">=</span><span class="va">nombre</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="fn">render_template</span>(<span class="st">'formulario.html'</span>)<br>
+        </div>
+      </div>
+      <div class="card card-g" style="padding:12px 16px;">
+        <div style="font-size:12px;color:var(--green);font-family:var(--mono);margin-bottom:6px;">TIP PRACTICO</div>
+        <p class="small">GET es para leer, POST para cambiar. Si recargas despues de POST, Flask puede volver a enviar.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     SLIDE 11 — BASE DE DATOS
+═══════════════════════════════════════════════════ -->
+<section class="slide" id="s11" data-title="¿Qué es una base de datos? (Bloque 3)">
+  <div class="sw col2l" style="gap:32px;align-items:start;">
+    <p class="fade-in sl">bloque 3 · datos</p>
+    <h2 class="fade-in h2" style="margin-bottom:8px;">¿Qué es una <span class="p">base de datos</span>?</h2>
+    <p class="fade-in small" style="margin-bottom:24px;">Es como una hoja de cálculo Excel muy potente que guarda información de forma permanente.</p>
+
+    <div class="fade-in col2l" style="gap:24px;align-items:start;">
+      <div style="display:flex;flex-direction:column;gap:14px;">
+        <div class="card" style="padding:14px 18px;">
+          <div style="font-weight:700;color:var(--purple);margin-bottom:10px;">📋 Tabla: Tareas</div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px;font-family:var(--mono);">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border);">
+                <th style="text-align:left;padding:6px 10px;color:var(--blue);">id</th>
+                <th style="text-align:left;padding:6px 10px;color:var(--blue);">titulo</th>
+                <th style="text-align:left;padding:6px 10px;color:var(--blue);">completada</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:6px 10px;color:var(--muted);">1</td>
+                <td style="padding:6px 10px;">Aprender Flask</td>
+                <td style="padding:6px 10px;color:var(--green);">True</td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border);">
+                <td style="padding:6px 10px;color:var(--muted);">2</td>
+                <td style="padding:6px 10px;">Conectar SQLite</td>
+                <td style="padding:6px 10px;color:var(--yellow);">False</td>
+              </tr>
+              <tr>
+                <td style="padding:6px 10px;color:var(--muted);">3</td>
+                <td style="padding:6px 10px;">Hacer CRUD</td>
+                <td style="padding:6px 10px;color:var(--yellow);">False</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="col2" style="gap:10px;">
+          <div class="card card-g" style="padding:12px;">
+            <div style="font-weight:700;color:var(--green);font-size:13px;margin-bottom:6px;">SQLite ✓</div>
+            <ul class="blist" style="gap:4px;">
+              <li style="font-size:12px;">Viene en Python</li>
+              <li style="font-size:12px;">Un solo archivo .db</li>
+              <li style="font-size:12px;">Cero instalación</li>
+            </ul>
+          </div>
+          <div class="card card-b" style="padding:12px;">
+            <div style="font-weight:700;color:var(--blue);font-size:13px;margin-bottom:6px;">¿Por qué BD?</div>
+            <ul class="blist blue" style="gap:4px;">
+              <li style="font-size:12px;">Persiste entre recargas</li>
+              <li style="font-size:12px;">Puede crecer</li>
+              <li style="font-size:12px;">Es real</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div style="font-size:13px;color:var(--muted);font-family:var(--mono);margin-bottom:12px;">// ANALOGÍA CON ARDUINO</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div class="card" style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:var(--muted);font-size:13px;">Variable en Arduino</span>
+            <span style="font-family:var(--mono);font-size:11px;color:var(--dim);">→ se pierde al apagar</span>
+          </div>
+          <div class="card card-g" style="padding:12px 16px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:13px;">SQLite en Python</span>
+            <span style="font-family:var(--mono);font-size:11px;color:var(--green);">→ persiste siempre</span>
+          </div>
+        </div>
+        <div class="card" style="padding:14px 18px;margin-top:12px;background:rgba(167,139,250,.04);border-color:rgba(167,139,250,.3);">
+          <div style="font-size:12px;color:var(--purple);font-family:var(--mono);margin-bottom:6px;">📁 GENERA UN ARCHIVO</div>
+          <p class="small">SQLite crea un archivo <span class="mono" style="color:var(--green);">tareas.db</span> en tu proyecto. Podés abrirlo con herramientas visuales como DB Browser for SQLite.</p>
+        </div>
+      </div>
+    </div>
+    <div class="fade-in" style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card card-b" style="padding:16px 18px;">
+        <div style="font-size:12px;color:var(--blue);font-family:var(--mono);margin-bottom:6px;">CUANDO USAR BD</div>
+        <ul class="blist blue" style="gap:6px;">
+          <li style="font-size:13px;">Datos deben sobrevivir recargas</li>
+          <li style="font-size:13px;">Necesitas buscar y filtrar</li>
+          <li style="font-size:13px;">Mas de un usuario</li>
+        </ul>
+      </div>
+      <div class="card" style="padding:16px 18px;border-color:rgba(251,146,60,.3);background:rgba(251,146,60,.04);">
+        <div style="font-size:12px;color:var(--orange);font-family:var(--mono);margin-bottom:6px;">TIPOS COMUNES</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <span class="pill">Integer</span>
+          <span class="pill">String</span>
+          <span class="pill">Boolean</span>
+          <span class="pill">DateTime</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     SLIDE 12 — MODELOS SQLALCHEMY
+═══════════════════════════════════════════════════ -->
+<section class="slide" id="s12" data-title="Modelos con Flask-SQLAlchemy">
+  <div class="sw col2" style="gap:32px;align-items:start;">
+    <div>
+      <p class="fade-in sl">bloque 3 · ORM</p>
+      <h2 class="fade-in h2" style="margin-bottom:14px;"><span class="o">SQLAlchemy</span> ORM</h2>
+      <p class="fade-in small" style="margin-bottom:16px;">Un ORM (Object Relational Mapper) te deja hablar con la base de datos usando Python puro — sin escribir SQL.</p>
+
+      <div class="fade-in" style="display:flex;flex-direction:column;gap:10px;">
+        <div class="card" style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:14px;">Clase Python</span>
+          <span style="color:var(--muted);">→</span>
+          <span style="font-size:14px;color:var(--orange);">Tabla en la BD</span>
+        </div>
+        <div class="card" style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:14px;">Atributo <span class="mono">titulo</span></span>
+          <span style="color:var(--muted);">→</span>
+          <span style="font-size:14px;color:var(--orange);">Columna <span class="mono">titulo</span></span>
+        </div>
+        <div class="card" style="padding:12px 16px;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:14px;">Objeto <span class="mono">t = Tarea()</span></span>
+          <span style="color:var(--muted);">→</span>
+          <span style="font-size:14px;color:var(--orange);">Fila en la tabla</span>
+        </div>
+      </div>
+
+      <div class="fade-in card card-g" style="padding:14px 18px;margin-top:16px;">
+        <div style="font-size:12px;color:var(--green);font-family:var(--mono);margin-bottom:8px;">⏸ HACEMOS JUNTOS</div>
+        <ul class="blist" style="gap:6px;">
+          <li style="font-size:13px;">Agregar SQLAlchemy a <span class="mono">app.py</span></li>
+          <li style="font-size:13px;">Definir el modelo <span class="mono g">Tarea</span></li>
+          <li style="font-size:13px;">Crear la tabla con <span class="mono">db.create_all()</span></li>
+          <li style="font-size:13px;">Verificar que el archivo .db se creó</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="fade-in">
+      <div class="cw">
+        <div class="cw-bar">
+          <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+          <span class="cw-file">app.py — modelo completo</span>
+        </div>
+        <div class="cw-body" style="font-size:12px;">
+<span class="im">from</span> <span class="va"> flask </span><span class="im">import</span> <span class="cl">Flask</span><br>
+<span class="im">from</span> <span class="va"> flask_sqlalchemy </span><span class="im">import</span> <span class="cl">SQLAlchemy</span><br>
+<br>
+<span class="va">app</span> <span class="kw">=</span> <span class="cl">Flask</span>(<span class="va">__name__</span>)<br>
+<span class="va">app</span>.<span class="va">config</span>[<span class="st">'SQLALCHEMY_DATABASE_URI'</span>] <span class="kw">=</span> <span class="st">'sqlite:///tareas.db'</span><br>
+<span class="va">db</span> <span class="kw">=</span> <span class="cl">SQLAlchemy</span>(<span class="va">app</span>)<br>
+<br>
+<span class="cm"># Modelo = Tabla en la BD</span><br>
+<span class="kw">class</span> <span class="cl">Tarea</span>(<span class="cl">db.Model</span>):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="va">id</span> <span class="kw">=</span> <span class="cl">db</span>.<span class="cl">Column</span>(<span class="cl">db</span>.<span class="cl">Integer</span>, <span class="va">primary_key</span><span class="kw">=</span><span class="kw">True</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="va">titulo</span> <span class="kw">=</span> <span class="cl">db</span>.<span class="cl">Column</span>(<span class="cl">db</span>.<span class="cl">String</span>(<span class="nu">200</span>), <span class="va">nullable</span><span class="kw">=False</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="va">completada</span> <span class="kw">=</span> <span class="cl">db</span>.<span class="cl">Column</span>(<span class="cl">db</span>.<span class="cl">Boolean</span>, <span class="va">default</span><span class="kw">=False</span>)<br>
+<br>
+<span class="cm"># Crear la tabla al iniciar</span><br>
+<span class="kw">with</span> <span class="va">app</span>.<span class="fn">app_context</span>():<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="va">db</span>.<span class="fn">create_all</span>()<br>
+        </div>
+      </div>
+      <div class="card" style="padding:12px 16px;margin-top:12px;border-color:rgba(56,189,248,.3);background:rgba(56,189,248,.04);">
+        <div style="font-size:12px;color:var(--blue);font-family:var(--mono);margin-bottom:6px;">SQL VS ORM</div>
+        <p class="small">ORM traduce Python a SQL. Es mas legible y evita errores repetidos.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     SLIDE 13 — CREATE + READ
+═══════════════════════════════════════════════════ -->
+<section class="slide" id="s13" data-title="Crear y leer datos (Bloque 4)">
+  <div class="sw col2" style="gap:28px;align-items:start;">
+    <div>
+      <p class="fade-in sl">bloque 4 · CRUD</p>
+      <h2 class="fade-in h2" style="margin-bottom:16px;"><span class="g">C</span><span class="m">RU</span>D — Crear y Leer</h2>
+
+      <div class="fade-in" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div class="crud-card card-g card" style="border-width:2px;">
+          <div style="font-family:var(--mono);font-size:22px;font-weight:900;color:var(--green);">C</div>
+          <div style="font-weight:700;font-size:14px;">Create</div>
+          <div style="font-size:12px;color:var(--muted);">Guardar nueva tarea en la BD desde el formulario</div>
+        </div>
+        <div class="crud-card card-b card">
+          <div style="font-family:var(--mono);font-size:22px;font-weight:900;color:var(--blue);">R</div>
+          <div style="font-weight:700;font-size:14px;">Read</div>
+          <div style="font-size:12px;color:var(--muted);">Traer todas las tareas y mostrarlas en pantalla</div>
+        </div>
+      </div>
+
+      <div class="fade-in card card-g" style="padding:14px 18px;">
+        <div style="font-size:12px;color:var(--green);font-family:var(--mono);margin-bottom:8px;">⏸ ACTIVIDAD — PUNTO DE CONTROL</div>
+        <ul class="blist" style="gap:6px;">
+          <li style="font-size:13px;">¿Se guarda la tarea y aparece en la lista?</li>
+          <li style="font-size:13px;">¿Si recargás la página, sigue ahí?</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="fade-in">
+      <div class="cw">
+        <div class="cw-bar">
+          <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+          <span class="cw-file">app.py — create + read</span>
+        </div>
+        <div class="cw-body" style="font-size:12px;">
+<span class="cm"># READ — mostrar todas las tareas</span><br>
+<span class="de">@app.route</span>(<span class="st">'/'</span>)<br>
+<span class="kw">def</span> <span class="fn">index</span>():<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="va">tareas</span> <span class="kw">=</span> <span class="cl">Tarea</span>.<span class="fn">query</span>.<span class="fn">all</span>()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="fn">render_template</span>(<span class="st">'index.html'</span>, <span class="va">tareas</span><span class="kw">=</span><span class="va">tareas</span>)<br>
+<br>
+<span class="cm"># CREATE — guardar nueva tarea</span><br>
+<span class="de">@app.route</span>(<span class="st">'/agregar'</span>, <span class="va">methods</span><span class="kw">=</span>[<span class="st">'POST'</span>])<br>
+<span class="kw">def</span> <span class="fn">agregar</span>():<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="va">titulo</span> <span class="kw">=</span> <span class="va">request</span>.<span class="fn">form</span>[<span class="st">'titulo'</span>]<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="va">nueva</span> <span class="kw">=</span> <span class="cl">Tarea</span>(<span class="va">titulo</span><span class="kw">=</span><span class="va">titulo</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="va">db</span>.<span class="fn">session</span>.<span class="fn">add</span>(<span class="va">nueva</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="va">db</span>.<span class="fn">session</span>.<span class="fn">commit</span>()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="fn">redirect</span>(<span class="st">'/'</span>)<br>
+        </div>
+      </div>
+      <div class="cw" style="margin-top:10px;">
+        <div class="cw-bar">
+          <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+          <span class="cw-file">templates/index.html — loop</span>
+        </div>
+        <div class="cw-body" style="font-size:12px;">
+<span class="de">{% for tarea in tareas %}</span><br>
+&nbsp;&nbsp;<span class="st">&lt;li&gt;</span><span class="kw">{{ tarea.titulo }}</span><span class="st">&lt;/li&gt;</span><br>
+<span class="de">{% endfor %}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     SLIDE 14 — UPDATE + DELETE
+═══════════════════════════════════════════════════ -->
+<section class="slide" id="s14" data-title="Actualizar y eliminar datos">
+  <div class="sw col2" style="gap:28px;align-items:start;">
+    <div>
+      <p class="fade-in sl">bloque 4 · CRUD completo</p>
+      <h2 class="fade-in h2" style="margin-bottom:16px;">CR<span class="o">U</span><span class="red" style="color:var(--red);">D</span> — Update y Delete</h2>
+
+      <div class="fade-in" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div class="crud-card card card-p">
+          <div style="font-family:var(--mono);font-size:22px;font-weight:900;color:var(--purple);">U</div>
+          <div style="font-weight:700;font-size:14px;">Update</div>
+          <div style="font-size:12px;color:var(--muted);">Modificar una tarea existente por su ID</div>
+        </div>
+        <div class="crud-card card" style="background:rgba(248,113,113,.04);border-color:rgba(248,113,113,.3);">
+          <div style="font-family:var(--mono);font-size:22px;font-weight:900;color:var(--red);">D</div>
+          <div style="font-weight:700;font-size:14px;">Delete</div>
+          <div style="font-size:12px;color:var(--muted);">Eliminar una tarea y redirigir al listado</div>
+        </div>
+      </div>
+
+      <div class="fade-in card" style="padding:12px 16px;background:rgba(252,211,77,.04);border-color:rgba(252,211,77,.3);">
+        <div style="font-size:12px;color:var(--yellow);font-family:var(--mono);margin-bottom:6px;">💡 PATRÓN CLAVE</div>
+        <p class="small">Siempre identificamos el registro por su <span class="mono" style="color:var(--yellow);">id</span>. Lo pasamos en la URL: <span class="mono" style="color:var(--text);font-size:11px;">/eliminar/3</span></p>
+      </div>
+
+      <div class="fade-in card card-g" style="padding:14px 18px;margin-top:10px;">
+        <div style="font-size:12px;color:var(--green);font-family:var(--mono);margin-bottom:8px;">⏸ CRUD COMPLETO — ACTIVIDAD FINAL</div>
+        <p class="small">Ahora tenés el ciclo completo. Probá crear, editar y eliminar tareas hasta que todo funcione sin errores.</p>
+      </div>
+    </div>
+
+    <div class="fade-in">
+      <div class="cw">
+        <div class="cw-bar">
+          <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+          <span class="cw-file">app.py — update + delete</span>
+        </div>
+        <div class="cw-body" style="font-size:12px;">
+<span class="cm"># UPDATE — completar tarea</span><br>
+<span class="de">@app.route</span>(<span class="st">'/completar/&lt;int:id&gt;'</span>)<br>
+<span class="kw">def</span> <span class="fn">completar</span>(<span class="va">id</span>):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="va">tarea</span> <span class="kw">=</span> <span class="cl">Tarea</span>.<span class="fn">query</span>.<span class="fn">get_or_404</span>(<span class="va">id</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="va">tarea</span>.<span class="va">completada</span> <span class="kw">=</span> <span class="kw">not</span> <span class="va">tarea</span>.<span class="va">completada</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="va">db</span>.<span class="fn">session</span>.<span class="fn">commit</span>()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="fn">redirect</span>(<span class="st">'/'</span>)<br>
+<br>
+<span class="cm"># DELETE — eliminar tarea</span><br>
+<span class="de">@app.route</span>(<span class="st">'/eliminar/&lt;int:id&gt;'</span>)<br>
+<span class="kw">def</span> <span class="fn">eliminar</span>(<span class="va">id</span>):<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="va">tarea</span> <span class="kw">=</span> <span class="cl">Tarea</span>.<span class="fn">query</span>.<span class="fn">get_or_404</span>(<span class="va">id</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="va">db</span>.<span class="fn">session</span>.<span class="fn">delete</span>(<span class="va">tarea</span>)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="va">db</span>.<span class="fn">session</span>.<span class="fn">commit</span>()<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="fn">redirect</span>(<span class="st">'/'</span>)<br>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     SLIDE 15 — MINI-PROYECTO
+═══════════════════════════════════════════════════ -->
+<section class="slide" id="s15" data-title="Mini-proyecto integrador (Bloque 5)">
+  <div class="sw col2l" style="gap:32px;align-items:start;">
+    <div>
+      <p class="fade-in sl">bloque 5 · integración</p>
+      <h2 class="fade-in h2" style="margin-bottom:8px;">Mini-proyecto <span class="g">integrador</span></h2>
+      <p class="fade-in small" style="margin-bottom:20px;">Juntamos todo lo que aprendimos en una app completa y funcional.</p>
+
+      <div class="fade-in" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+        <div class="card" style="padding:11px 14px;display:flex;align-items:center;gap:10px;">
+          <span style="color:var(--green);font-size:16px;">✅</span>
+          <span style="font-size:14px;">Servidor Flask corriendo</span>
+        </div>
+        <div class="card" style="padding:11px 14px;display:flex;align-items:center;gap:10px;">
+          <span style="color:var(--green);font-size:16px;">✅</span>
+          <span style="font-size:14px;">Plantilla base + herencia HTML</span>
+        </div>
+        <div class="card" style="padding:11px 14px;display:flex;align-items:center;gap:10px;">
+          <span style="color:var(--green);font-size:16px;">✅</span>
+          <span style="font-size:14px;">Modelo Tarea en SQLite</span>
+        </div>
+        <div class="card" style="padding:11px 14px;display:flex;align-items:center;gap:10px;">
+          <span style="color:var(--green);font-size:16px;">✅</span>
+          <span style="font-size:14px;">CRUD completo desde el navegador</span>
+        </div>
+        <div class="card card-g" style="padding:11px 14px;display:flex;align-items:center;gap:10px;">
+          <span style="font-size:16px;">⭐</span>
+          <span style="font-size:14px;font-weight:700;color:var(--green);">Tu funcionalidad extra</span>
+        </div>
+      </div>
+
+      <div class="fade-in card card-b" style="padding:12px 16px;">
+        <div style="font-size:12px;color:var(--blue);font-family:var(--mono);margin-bottom:6px;">IDEAS PARA EXTENDER</div>
+        <ul class="blist blue" style="gap:6px;">
+          <li style="font-size:13px;">Agregar campo "descripción" a la tarea</li>
+          <li style="font-size:13px;">Filtrar tareas completadas / pendientes</li>
+          <li style="font-size:13px;">Agregar fecha de creación</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- App final mockup -->
+    <div class="fade-in">
+      <div class="cw" style="height:100%;">
+        <div class="cw-bar">
+          <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+          <span class="cw-file">localhost:5000 — app final</span>
+        </div>
+        <div class="cw-body" style="padding:20px;font-family:var(--font);height:calc(100% - 40px);">
+          <div style="font-size:18px;font-weight:800;margin-bottom:6px;color:var(--green);">📋 Lista de Tareas</div>
+          <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">3 tareas · 1 completada</div>
+
+          <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:16px;">
+            <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--surface);padding:9px 12px;border-radius:7px;border:1px solid var(--border);">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="color:var(--green);font-size:12px;">✓</span>
+                <span style="font-size:12px;text-decoration:line-through;color:var(--muted);">Aprender Flask</span>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <span style="font-size:10px;color:var(--blue);cursor:default;">editar</span>
+                <span style="font-size:10px;color:var(--red);cursor:default;">borrar</span>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--surface);padding:9px 12px;border-radius:7px;border:1px solid var(--border);">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="color:var(--yellow);font-size:12px;">○</span>
+                <span style="font-size:12px;">Conectar SQLite</span>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <span style="font-size:10px;color:var(--blue);cursor:default;">editar</span>
+                <span style="font-size:10px;color:var(--red);cursor:default;">borrar</span>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;justify-content:space-between;background:var(--surface);padding:9px 12px;border-radius:7px;border:1px solid var(--border);">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="color:var(--yellow);font-size:12px;">○</span>
+                <span style="font-size:12px;">Agregar mi funcionalidad</span>
+              </div>
+              <div style="display:flex;gap:6px;">
+                <span style="font-size:10px;color:var(--blue);cursor:default;">editar</span>
+                <span style="font-size:10px;color:var(--red);cursor:default;">borrar</span>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;">
+            <input style="flex:1;background:var(--card);border:1px solid var(--border2);border-radius:6px;padding:7px 10px;color:var(--muted);font-size:12px;font-family:var(--font);" placeholder="Nueva tarea..." readonly>
+            <button style="background:var(--green);color:#080C14;border:none;padding:7px 14px;border-radius:6px;font-weight:700;font-size:12px;cursor:default;">+ Agregar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     SLIDE 16 — QUÉ SIGUE
+═══════════════════════════════════════════════════ -->
+<section class="slide" id="s16" data-title="¿Qué sigue después de hoy?">
+  <div class="sw col2r" style="gap:32px;align-items:start;">
+    <div>
+      <p class="fade-in sl">próximos pasos</p>
+      <h2 class="fade-in h2" style="margin-bottom:24px;">¿Qué sigue <span class="b">después</span> del taller?</h2>
+
+      <div class="fade-in col3" style="gap:14px;margin-bottom:20px;">
+        <div class="card card-p" style="padding:16px 18px;">
+          <div style="font-size:22px;margin-bottom:8px;">🔐</div>
+          <div style="font-weight:700;font-size:14px;color:var(--purple);margin-bottom:6px;">Autenticación</div>
+          <p class="small">Login, registro y manejo de sesiones con Flask-Login</p>
+        </div>
+        <div class="card card-b" style="padding:16px 18px;">
+          <div style="font-size:22px;margin-bottom:8px;">✅</div>
+          <div style="font-weight:700;font-size:14px;color:var(--blue);margin-bottom:6px;">Validación</div>
+          <p class="small">Verificar que los datos del formulario sean correctos antes de guardar</p>
+        </div>
+        <div class="card card-g" style="padding:16px 18px;">
+          <div style="font-size:22px;margin-bottom:8px;">🚀</div>
+          <div style="font-weight:700;font-size:14px;color:var(--green);margin-bottom:6px;">Despliegue</div>
+          <p class="small">Publicar tu app en internet con Railway o Render (gratis)</p>
+        </div>
+        <div class="card" style="padding:16px 18px;border-color:rgba(251,146,60,.3);background:rgba(251,146,60,.04);">
+          <div style="font-size:22px;margin-bottom:8px;">🎨</div>
+          <div style="font-weight:700;font-size:14px;color:var(--orange);margin-bottom:6px;">CSS / Bootstrap</div>
+          <p class="small">Darle diseño a tu app para que se vea profesional</p>
+        </div>
+        <div class="card" style="padding:16px 18px;border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.04);">
+          <div style="font-size:22px;margin-bottom:8px;">🔌</div>
+          <div style="font-weight:700;font-size:14px;color:var(--red);margin-bottom:6px;">APIs REST</div>
+          <p class="small">Exponer tus datos para que otras apps puedan consumirlos</p>
+        </div>
+        <div class="card" style="padding:16px 18px;border-color:rgba(252,211,77,.3);background:rgba(252,211,77,.04);">
+          <div style="font-size:22px;margin-bottom:8px;">🐘</div>
+          <div style="font-weight:700;font-size:14px;color:var(--yellow);margin-bottom:6px;">PostgreSQL</div>
+          <p class="small">Base de datos de producción real, la que usan las empresas</p>
+        </div>
+      </div>
+
+      <div class="fade-in col3" style="gap:12px;">
+        <div class="card" style="padding:10px 14px;text-align:center;">
+          <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:4px;">DOCUMENTACIÓN</div>
+          <div style="font-weight:600;font-size:13px;">flask.palletsprojects.com</div>
+        </div>
+        <div class="card" style="padding:10px 14px;text-align:center;">
+          <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:4px;">TUTORIALES</div>
+          <div style="font-weight:600;font-size:13px;">realpython.com</div>
+        </div>
+        <div class="card" style="padding:10px 14px;text-align:center;">
+          <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-bottom:4px;">GUÍA COMPLETA</div>
+          <div style="font-weight:600;font-size:13px;">fullstackpython.com</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fade-in" style="display:flex;flex-direction:column;gap:12px;">
+      <div class="card card-g" style="padding:16px 18px;">
+        <div style="font-size:12px;color:var(--green);font-family:var(--mono);margin-bottom:8px;">RUTA SUGERIDA (4 SEMANAS)</div>
+        <ul class="blist" style="gap:6px;">
+          <li style="font-size:13px;">Semana 1: reforzar rutas + templates</li>
+          <li style="font-size:13px;">Semana 2: formularios + validacion</li>
+          <li style="font-size:13px;">Semana 3: CRUD + filtros</li>
+          <li style="font-size:13px;">Semana 4: despliegue + demo</li>
+        </ul>
+      </div>
+      <div class="card card-b" style="padding:16px 18px;">
+        <div style="font-size:12px;color:var(--blue);font-family:var(--mono);margin-bottom:8px;">PROYECTOS PARA PRACTICAR</div>
+        <ul class="blist blue" style="gap:6px;">
+          <li style="font-size:13px;">Agenda de contactos</li>
+          <li style="font-size:13px;">Registro de gastos personales</li>
+          <li style="font-size:13px;">Inventario simple de productos</li>
+          <li style="font-size:13px;">Notas por categorias</li>
+        </ul>
+      </div>
+      <div class="card" style="padding:16px 18px;border-color:rgba(167,139,250,.3);background:rgba(167,139,250,.04);">
+        <div style="font-size:12px;color:var(--purple);font-family:var(--mono);margin-bottom:8px;">HABILIDADES CLAVE</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <span class="pill">CRUD</span>
+          <span class="pill">Templates</span>
+          <span class="pill">SQL</span>
+          <span class="pill">Deploy</span>
+          <span class="pill">Git</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════════════
+     SLIDE 17 — CIERRE
+═══════════════════════════════════════════════════ -->
+<section class="slide" id="s17" data-title="¡Lo lograron!">
+  <div class="sw-center" style="position:relative;overflow:hidden;text-align:center;align-items:center;">
+    <div class="grid-bg" style="opacity:.15;"></div>
+    <div id="confetti-container"></div>
+
+    <div style="position:relative;z-index:1;max-width:700px;">
+      <div class="fade-in" style="font-size:64px;margin-bottom:16px;">🎉</div>
+      <div class="fade-in" style="margin-bottom:12px;">
+        <span class="tag tag-green" style="font-size:13px;">$ python app.py → ✓ RUNNING</span>
+      </div>
+      <h1 class="fade-in h1" style="margin-bottom:12px;">¡Lo <span class="g">lograron</span>!</h1>
+      <p class="fade-in" style="font-size:18px;color:var(--muted);margin-bottom:36px;">
+        Hoy construyeron desde cero una app web real con Python, conectada a una base de datos, con CRUD completo funcionando en su navegador.
+      </p>
+
+      <div class="fade-in col3" style="gap:12px;margin-bottom:36px;">
+        <div class="card card-g" style="padding:14px;text-align:center;">
+          <div style="font-size:28px;margin-bottom:6px;">🐍</div>
+          <div style="font-weight:700;font-size:13px;">Flask</div>
+          <div style="font-size:11px;color:var(--muted);">Servidor web</div>
+        </div>
+        <div class="card card-p" style="padding:14px;text-align:center;">
+          <div style="font-size:28px;margin-bottom:6px;">🗄️</div>
+          <div style="font-weight:700;font-size:13px;">SQLite</div>
+          <div style="font-size:11px;color:var(--muted);">Base de datos</div>
+        </div>
+        <div class="card card-b" style="padding:14px;text-align:center;">
+          <div style="font-size:28px;margin-bottom:6px;">⚡</div>
+          <div style="font-weight:700;font-size:13px;">CRUD</div>
+          <div style="font-size:11px;color:var(--muted);">Operaciones reales</div>
+        </div>
+      </div>
+
+      <div class="fade-in card" style="padding:16px 24px;display:inline-flex;align-items:center;gap:16px;background:rgba(0,232,122,.06);border-color:rgba(0,232,122,.3);">
+        <span style="font-size:20px;">📁</span>
+        <div style="text-align:left;">
+          <div style="font-weight:700;font-size:14px;color:var(--green);">Repo del taller disponible</div>
+          <div style="font-size:12px;color:var(--muted);">El código completo de cada bloque está en GitHub</div>
+        </div>
+      </div>
+
+      <p class="fade-in" style="font-size:14px;color:var(--dim);margin-top:28px;">
+        <span class="kbd">←</span> <span class="kbd">→</span> navegar &nbsp;·&nbsp; <span class="kbd">N</span> notas del tutor
+      </p>
+    </div>
+  </div>
+</section>
+
+</div><!-- end #deck -->
+
+<!-- ═══ BOTTOM NAV ═══ -->
+<div id="nav">
+  <div class="n-left">
+    <span class="counter" id="counter">1 / 17</span>
+    <span class="title-text" id="nav-title">Bienvenida y presentaciones</span>
+  </div>
+  <div class="n-right">
+    <button class="btn-notes" onclick="toggleNotes()">📝 Notas (N)</button>
+    <button onclick="prevSlide()">← Anterior</button>
+    <button onclick="nextSlide()">Siguiente →</button>
+  </div>
+</div>
+
+<!-- ═══ SPEAKER NOTES ═══ -->
+<div id="notes-panel">
+  <h4>📋 Notas del tutor</h4>
+  <div id="notes-content"></div>
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const total = slides.length;
+let current = 0;
+let notesOpen = false;
+
+const notes = [
+  // S1 - Bienvenida
+  `<p><span class="tag-ambos">AMBOS</span> Preséntense con nombre y carrera. Sean cercanos — son compañeros de universidad, no maestros formales.</p>
+   <p><span class="tag-t1">TUTOR 1</span> Hace las preguntas del rompehielos a cada estudiante (1-2 min por persona).</p>
+   <p><span class="tag-t2">TUTOR 2</span> Mientras tanto, verifica que el proyector o pantalla se vea bien desde los dos puestos.</p>
+   <p><strong>Tiempo:</strong> máximo 8 minutos en esta slide. No se tarda mucho — el ambiente se crea al codear juntos.</p>`,
+
+  // S2 - Qué vamos a construir
+  `<p><span class="tag-t1">TUTOR 1</span> Explica lo que van a construir mostrando el mockup de la slide. "Al final del taller van a tener esto corriendo en su propia máquina."</p>
+   <p><span class="tag-t2">TUTOR 2</span> Si tenés una versión funcionando, ábrela en el navegador para mostrarla en vivo. Vale más que mil palabras.</p>
+   <p><strong>Mensaje clave:</strong> no van a aprender todo hoy, pero sí van a salir con algo REAL y funcional.</p>`,
+
+  // S3 - Agenda
+  `<p><span class="tag-ambos">AMBOS</span> Repasan la agenda brevemente. No la lean textualmente — solo digan "en el Bloque 1 vamos a prender el servidor, en el 3 conectamos la base de datos..."</p>
+   <p><strong>Advertencia importante:</strong> digan que si en algún momento se quedan atrás, que levanten la mano DE INMEDIATO. Es un grupo pequeño — nadie se queda solo.</p>
+   <p><strong>Tiempo sugerido en esta slide:</strong> 2 minutos máximo.</p>`,
+
+  // S4 - Setup
+  `<p><span class="tag-t1">TUTOR 1</span> Comparte los comandos en un mensaje de WhatsApp o grupo para que los estudiantes puedan copiarlos sin errores tipográficos.</p>
+   <p><span class="tag-t2">TUTOR 2</span> Camina al puesto de cada estudiante para verificar que Python y pip funcionan. Uno de ellos no tiene Python instalado — ese es el prioritario.</p>
+   <p><strong>⚠️ ERROR COMÚN EN WINDOWS:</strong> Si 'python' no se reconoce, probar con 'py' o 'python3'. También revisar que Python esté en el PATH del sistema.</p>
+   <p><strong>⚠️ ENTORNO VIRTUAL:</strong> En Windows el comando de activación es <code>venv\\Scripts\\activate</code>, no <code>source venv/bin/activate</code>.</p>
+   <p><strong>Tiempo:</strong> pueden tomar hasta 20 minutos aquí si hace falta. No hay problema — mejor setup limpio que problemas después.</p>`,
+
+  // S5 - Cómo funciona la web
+  `<p><span class="tag-t1">TUTOR 1</span> Explica el diagrama cliente-servidor. Usa la analogía Arduino: "el sensor manda datos (request), el micro los procesa (Flask), y la respuesta actúa (HTML en el browser)."</p>
+   <p><span class="tag-t2">TUTOR 2</span> Complementa con un ejemplo cotidiano: "Cuando entrás a YouTube, tu navegador le pregunta al servidor 'dame los videos de...' y el servidor responde con HTML."</p>
+   <p><strong>No te extiendas mucho:</strong> 3-4 minutos. El concepto se entiende mejor cuando lo ven funcionar en el siguiente slide.</p>`,
+
+  // S6 - Qué es Flask
+  `<p><span class="tag-t1">TUTOR 1</span> Muestra el código en pantalla. Explica línea por línea: "Importamos Flask, creamos la app, definimos una ruta con este decorador, y retornamos texto."</p>
+   <p><span class="tag-t2">TUTOR 2</span> Anticipa la pregunta: "¿Qué es ese @ antes de app.route?" — es un decorador de Python. Le dice a Flask que esta función maneja esa URL. No hace falta profundizar hoy.</p>
+   <p><strong>Mensaje clave:</strong> 10 líneas de código = servidor web funcionando. Eso es la potencia de Python.</p>`,
+
+  // S7 - Primer servidor
+  `<p><span class="tag-ambos">AMBOS</span> ⏸ PAUSA DE CÓDIGO — Esta es la primera actividad práctica del taller.</p>
+   <p><span class="tag-t1">TUTOR 1</span> Codea en vivo desde cero en tu pantalla mientras explicas. Vas despacio — ellos van copiando.</p>
+   <p><span class="tag-t2">TUTOR 2</span> Pasa por los puestos de cada estudiante para ver que van siguiendo el ritmo y el código corre.</p>
+   <p><strong>PUNTO DE CONTROL obligatorio:</strong> antes de avanzar, preguntá "¿Los dos ven la respuesta en el navegador?" y esperen confirmación.</p>
+   <p><strong>Error más común:</strong> Puerto 5000 en uso — solución: <code>app.run(port=5001)</code></p>`,
+
+  // S8 - Rutas y parámetros
+  `<p><span class="tag-t1">TUTOR 1</span> Muestra el código de rutas con parámetros. Haz énfasis en los corchetes angulares: "el nombre entre &lt;&gt; se convierte en variable."</p>
+   <p><span class="tag-ambos">AMBOS</span> ⏸ Que cada estudiante cree su propia ruta con su nombre. Dénles 3-5 minutos de trabajo independiente.</p>
+   <p><strong>Pregunta para generar curiosidad:</strong> "¿Qué pasaría si ponés /saludo/123? ¿Python qué recibiría?"</p>`,
+
+  // S9 - Jinja2
+  `<p><span class="tag-t1">TUTOR 1</span> Crea la carpeta templates/ y los archivos en vivo. Muestra cómo Flask sabe automáticamente buscar en esa carpeta.</p>
+   <p><span class="tag-t2">TUTOR 2</span> Explica el concepto de herencia: "base.html es el molde. Las otras páginas solo llenan los espacios."</p>
+   <p><span class="tag-ambos">AMBOS</span> ⏸ Actividad: que cada uno cree su propia plantilla base con una barra de navegación y una segunda página que herede de ella.</p>
+   <p><strong>Error común:</strong> el folder se llama 'templates' exactamente — Flask es sensible a mayúsculas/minúsculas en Windows a veces.</p>`,
+
+  // S10 - Formularios
+  `<p><span class="tag-t1">TUTOR 1</span> Muestra en el navegador la diferencia visual entre GET y POST. Abre las herramientas de desarrollador (F12) → Network para ver la diferencia.</p>
+   <p><span class="tag-t2">TUTOR 2</span> Asegúrate que el formulario funciona en los dos puestos antes de avanzar.</p>
+   <p><span class="tag-ambos">AMBOS</span> ⏸ Actividad: crear el formulario de saludo y mostrarlo funcionando. Este es el puente hacia la base de datos.</p>`,
+
+  // S11 - Base de datos
+  `<p><span class="tag-t1">TUTOR 1</span> Usa la analogía de Excel: "una tabla es como una hoja de cálculo. Cada fila es un registro, cada columna es un campo."</p>
+   <p><span class="tag-t2">TUTOR 2</span> Explica por qué SQLite: "Viene con Python, crea un solo archivo en tu proyecto. No necesitás instalar nada más."</p>
+   <p><strong>Herramienta visual opcional:</strong> si tenés tiempo, muestra DB Browser for SQLite para que vean la tabla visualmente.</p>`,
+
+  // S12 - SQLAlchemy
+  `<p><span class="tag-t1">TUTOR 1</span> Escribe el modelo en vivo. Explica cada tipo: Integer para números, String para texto, Boolean para verdadero/falso.</p>
+   <p><span class="tag-t2">TUTOR 2</span> Verifica que el archivo tareas.db se crea en la carpeta del proyecto después de db.create_all().</p>
+   <p><span class="tag-ambos">AMBOS</span> ⏸ Hacemos juntos: configurar la BD + definir el modelo + verificar que el archivo .db aparece.</p>
+   <p><strong>Si da error de import:</strong> verificar que flask-sqlalchemy está instalado con <code>pip install flask-sqlalchemy</code></p>`,
+
+  // S13 - Create + Read
+  `<p><span class="tag-t1">TUTOR 1</span> Codea el Create primero (la ruta /agregar con POST). Explica la secuencia: crear objeto → agregar a sesión → commit → redirigir.</p>
+   <p><span class="tag-t2">TUTOR 2</span> Agrega el loop en el template para mostrar las tareas con for.</p>
+   <p><span class="tag-ambos">AMBOS</span> ⏸ PUNTO DE CONTROL: "¿Se guarda la tarea? ¿Aparece en la lista? ¿Si recargás la página, sigue ahí?" — este momento es poderoso para los estudiantes.</p>`,
+
+  // S14 - Update + Delete
+  `<p><span class="tag-t1">TUTOR 1</span> Implementa el delete primero que es más simple. Explica get_or_404: "si no existe el ID, Flask devuelve un error 404 automáticamente."</p>
+   <p><span class="tag-t2">TUTOR 2</span> Implementa el toggle de completada (update). Muestra que el redirect después de modificar evita el problema de "¿reenviar el formulario?" al recargar.</p>
+   <p><span class="tag-ambos">AMBOS</span> ⏸ CRUD COMPLETO — dejen que los estudiantes prueben todo el ciclo solos 5-7 minutos. Es el momento "wow" del taller.</p>`,
+
+  // S15 - Mini-proyecto
+  `<p><span class="tag-ambos">AMBOS</span> ⏸ Bloque libre de integración. Los estudiantes ya tienen el CRUD. Ahora les pedís que elijan UNA cosa extra para agregar.</p>
+   <p><span class="tag-t1">TUTOR 1</span> Ayuda al estudiante que elija agregar un campo nuevo (ej: descripción).</p>
+   <p><span class="tag-t2">TUTOR 2</span> Ayuda al otro con lo que elija. Si se terminan rápido, desafíalos a agregar CSS básico.</p>
+   <p><strong>Si el tiempo es ajustado:</strong> está bien que solo revisen el código completo sin modificarlo. El logro es tener el CRUD funcionando.</p>`,
+
+  // S16 - Qué sigue
+  `<p><span class="tag-t1">TUTOR 1</span> Recorre las cards brevemente — no más de 2 minutos. El mensaje es: "esto fue el 10% del camino, y ya construyeron algo real."</p>
+   <p><span class="tag-t2">TUTOR 2</span> Menciona los recursos: Real Python y la documentación oficial de Flask son los mejores para seguir.</p>
+   <p><strong>Comparte el repo del taller</strong> con el código de cada bloque. Es el regalo más valioso que se llevan.</p>`,
+
+  // S17 - Cierre
+  `<p><span class="tag-ambos">AMBOS</span> Preguntas de reflexión para el grupo:</p>
+   <p>• "¿Qué fue lo más sorprendente del día?"</p>
+   <p>• "¿En qué momento sintieron que algo hizo clic?"</p>
+   <p>• "¿Qué les gustaría aprender después?"</p>
+   <p><span class="tag-t1">TUTOR 1</span> Comparte el link del repo de GitHub en este momento.</p>
+   <p><span class="tag-t2">TUTOR 2</span> Pregunta si hay dudas finales. Quédense 5 minutos extra si alguien quiere seguir.</p>
+   <p><strong>Cierre humano:</strong> recuérdenles que son compañeros de universidad. Si tienen preguntas después del taller, pueden escribirles.</p>`
+];
+
+function updateSlide(newIdx, direction) {
+  const curr = slides[current];
+  curr.classList.remove('active');
+  curr.classList.add('exit');
+  setTimeout(() => curr.classList.remove('exit'), 450);
+
+  current = newIdx;
+  const next = slides[current];
+  next.classList.add('active');
+
+  // Progress
+  document.getElementById('progress').style.width = ((current + 1) / total * 100) + '%';
+
+  // Counter
+  document.getElementById('counter').textContent = (current + 1) + ' / ' + total;
+
+  // Title
+  document.getElementById('nav-title').textContent = next.dataset.title || '';
+
+  // Notes
+  document.getElementById('notes-content').innerHTML = notes[current] || '<p>Sin notas para esta slide.</p>';
+}
+
+function nextSlide() {
+  if (current < total - 1) updateSlide(current + 1, 'next');
+}
+
+function prevSlide() {
+  if (current > 0) updateSlide(current - 1, 'prev');
+}
+
+function toggleNotes() {
+  notesOpen = !notesOpen;
+  document.getElementById('notes-panel').classList.toggle('open', notesOpen);
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); nextSlide(); }
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); prevSlide(); }
+  if (e.key === 'n' || e.key === 'N') toggleNotes();
+});
+
+// Touch / swipe
+let touchStartX = 0;
+document.addEventListener('touchstart', e => touchStartX = e.touches[0].clientX);
+document.addEventListener('touchend', e => {
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(dx) > 50) dx < 0 ? nextSlide() : prevSlide();
+});
+
+// Confetti on last slide
+function spawnConfetti() {
+  const container = document.getElementById('confetti-container');
+  if (!container) return;
+  const colors = ['#00E87A','#38BDF8','#A78BFA','#FB923C','#F87171','#FCD34D'];
+  for (let i = 0; i < 35; i++) {
+    const d = document.createElement('div');
+    d.className = 'confetti-dot';
+    d.style.left = Math.random() * 100 + 'vw';
+    d.style.background = colors[Math.floor(Math.random() * colors.length)];
+    d.style.animationDuration = (Math.random() * 3 + 2) + 's';
+    d.style.animationDelay = (Math.random() * 3) + 's';
+    d.style.width = d.style.height = (Math.random() * 8 + 4) + 'px';
+    container.appendChild(d);
+  }
+}
+
+// Init
+document.getElementById('progress').style.width = (1 / total * 100) + '%';
+document.getElementById('notes-content').innerHTML = notes[0];
+spawnConfetti();
+</script>
+</body>
+</html>
